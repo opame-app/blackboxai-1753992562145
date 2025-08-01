@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { getUserProfile, followUser, unfollowUser, requestToFollow, cancelFollowRequest } from '../../services/userService.js';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { getUserProfile, requestToFollow, cancelFollowRequest } from '../../services/userService.js';
 import { getPosts } from '../../services/postService.js';
+import { followUser, unfollowUser, checkIfFollowing, getFollowCounts } from '../../services/followService.js';
 import { createOrGetConversation, canUsersMessage } from '../../services/messageService.js';
 import { Camera, Grid3X3, Bookmark, UserCheck, Heart, MessageCircle, MessageSquare } from 'lucide-react';
 
@@ -26,22 +27,28 @@ const UserProfile = ({ user, userProfile }) => {
         const targetProfile = await getUserProfile(userId);
         if (targetProfile) {
           setProfile(targetProfile);
-          setFollowersCount(targetProfile.followers?.length || 0);
-          setFollowingCount(targetProfile.following?.length || 0);
+          
+          const counts = await getFollowCounts(userId);
+          setFollowersCount(counts.followersCount);
+          setFollowingCount(counts.followingCount);
 
+          let isFollowing = false;
           // Determine follow status
           if (user?.uid === userId) {
             setFollowStatus('own_profile');
-          } else if (userProfile?.following?.includes(userId)) {
-            setFollowStatus('following');
-          } else if (targetProfile.followRequests?.includes(user?.uid)) {
-            setFollowStatus('requested');
           } else {
-            setFollowStatus('not_following');
+            isFollowing = await checkIfFollowing(user.uid, userId);
+            if (isFollowing) {
+              setFollowStatus('following');
+            } else if (targetProfile.followRequests?.includes(user?.uid)) {
+              setFollowStatus('requested');
+            } else {
+              setFollowStatus('not_following');
+            }
           }
 
           // Fetch posts only if profile is public or user is following
-          const canViewPosts = !targetProfile.isPrivate || userProfile?.following?.includes(userId) || user?.uid === userId;
+          const canViewPosts = !targetProfile.isPrivate || isFollowing || user?.uid === userId;
           if (canViewPosts) {
             const allPosts = await getPosts();
             const userPosts = allPosts.filter(p => p.userId === userId);
@@ -165,12 +172,12 @@ const UserProfile = ({ user, userProfile }) => {
         <div className="flex items-center gap-8">
           <img 
             src={profile.photoURL || `https://i.pravatar.cc/150?u=${profile.uid}`} 
-            alt={profile.displayName}
+            alt={profile.displayName || profile.username}
             className="w-40 h-40 rounded-full object-cover"
           />
           <div className="flex-1">
             <div className="flex items-center gap-4 mb-4">
-              <h1 className="text-2xl font-light">{profile.username || profile.displayName}</h1>
+              <h1 className="text-2xl font-light">{profile.displayName || profile.username}</h1>
               {followStatus !== 'own_profile' && (
                 <>
                   <button 
@@ -195,11 +202,15 @@ const UserProfile = ({ user, userProfile }) => {
             </div>
             <div className="flex gap-8 mb-4">
               <div><span className="font-semibold">{posts.length}</span> publicaciones</div>
-              <div><span className="font-semibold">{followersCount}</span> seguidores</div>
-              <div><span className="font-semibold">{followingCount}</span> seguidos</div>
+              <Link to={`/profile/${userId}/followers`} className="hover:underline">
+                <span className="font-semibold">{followersCount}</span> seguidores
+              </Link>
+              <Link to={`/profile/${userId}/following`} className="hover:underline">
+                <span className="font-semibold">{followingCount}</span> seguidos
+              </Link>
             </div>
             <div>
-              <p className="font-semibold">{profile.displayName}</p>
+              <p className="font-semibold">{profile.displayName || profile.username}</p>
               {profile.bio && <p className="text-gray-600">{profile.bio}</p>}
               {isPrivate && (
                 <p className="text-sm text-gray-500 mt-2">🔒 Cuenta privada</p>

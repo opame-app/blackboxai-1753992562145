@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Link as RouterLink } from 'react-router-dom';
 import { updateUserProfile } from '../../services/userService.js';
 import { updateProfile } from 'firebase/auth';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../firebase.js';
 import { getPosts } from '../../services/postService.js';
+import { getFollowCounts } from '../../services/followService.js';
 import { 
   Settings, 
   Grid3X3, 
@@ -29,6 +31,8 @@ function MyProfile({ user, userProfile }) {
   const [loading, setLoading] = useState(false);
   const [userPosts, setUserPosts] = useState([]);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [followersCount, setFollowersCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
   const fileInputRef = useRef(null);
   
   const [formData, setFormData] = useState({
@@ -76,6 +80,22 @@ function MyProfile({ user, userProfile }) {
   useEffect(() => {
     fetchUserPosts();
   }, [fetchUserPosts]);
+
+  // Fetch follow counts
+  useEffect(() => {
+    const fetchFollowCounts = async () => {
+      if (!user?.uid) return;
+      try {
+        const counts = await getFollowCounts(user.uid);
+        setFollowersCount(counts.followersCount);
+        setFollowingCount(counts.followingCount);
+      } catch (error) {
+        console.error('Error fetching follow counts:', error);
+      }
+    };
+
+    fetchFollowCounts();
+  }, [user?.uid]);
   
   const handleFormChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -180,8 +200,12 @@ function MyProfile({ user, userProfile }) {
 
                 <div className="flex justify-center sm:justify-start gap-8 mb-4">
                   <div><span className="font-semibold">{userPosts.length}</span> publicaciones</div>
-                  <div><span className="font-semibold">0</span> seguidores</div>
-                  <div><span className="font-semibold">0</span> seguidos</div>
+                  <RouterLink to={`/profile/${user?.uid}/followers`} className="hover:underline">
+                    <span className="font-semibold">{followersCount}</span> seguidores
+                  </RouterLink>
+                  <RouterLink to={`/profile/${user?.uid}/following`} className="hover:underline">
+                    <span className="font-semibold">{followingCount}</span> seguidos
+                  </RouterLink>
                 </div>
 
                 {isEditing ? (

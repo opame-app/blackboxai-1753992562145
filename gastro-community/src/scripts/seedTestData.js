@@ -11,6 +11,7 @@ import {
   signOut
 } from 'firebase/auth';
 import { db, auth } from '../firebase.js';
+import { seedRestaurantData } from './seedRestaurantData.js';
 
 // Datos de prueba
 const testSuppliers = [
@@ -329,8 +330,32 @@ export async function seedTestData() {
   }
 }
 
+// Función para ejecutar todo el seed completo
+export async function seedAllData() {
+  console.log('🌱 Iniciando seed completo de datos...\n');
+  
+  try {
+    // Primero crear los datos de usuarios
+    await seedTestData();
+    
+    // Luego crear el restaurante con un owner ID de prueba
+    console.log('\n🏪 Creando restaurante de prueba...');
+    await seedRestaurantData('test-owner-rafa');
+    
+    console.log('\n✅ ¡Seed completo finalizado exitosamente!');
+    
+  } catch (error) {
+    console.error('❌ Error durante el seed completo:', error);
+  }
+}
+
 // Ejecutar si se llama directamente
 if (typeof window !== 'undefined') {
   window.seedTestData = seedTestData;
-  console.log('💡 Para ejecutar el seed, usa: window.seedTestData()');
+  window.seedRestaurantData = seedRestaurantData;
+  window.seedAllData = seedAllData;
+  console.log('💡 Funciones disponibles:');
+  console.log('  - window.seedTestData() - Solo usuarios y ofertas');
+  console.log('  - window.seedRestaurantData() - Solo restaurante');
+  console.log('  - window.seedAllData() - Todo completo');
 }

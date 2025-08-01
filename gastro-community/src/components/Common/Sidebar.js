@@ -19,10 +19,12 @@ import {
   Briefcase,
   ShieldCheck,
   Menu, // Keep Menu for the "More" button
-  ChevronDown
+  ChevronDown,
+  Store
 } from 'lucide-react';
 
 function Sidebar({ userProfile }) {
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const navigate = useNavigate();
 
@@ -42,10 +44,11 @@ function Sidebar({ userProfile }) {
   const mainLinks = [
     { to: '/home', label: 'Inicio', icon: Home },
     { to: '/search', label: 'Buscar', icon: Search },
+    // { to: '/restaurants', label: 'Restaurantes', icon: Store },
     { to: '/explore', label: 'Explorar', icon: Compass },
     { to: '/messages', label: 'Mensajes', icon: MessageCircle },
     { to: '/notifications', label: 'Notificaciones', icon: Heart },    
-    { to: '/create', label: 'Crear', icon: PlusSquare },
+    // { to: '/create', label: 'Crear', icon: PlusSquare },
     { to: '/profile', label: 'Perfil', icon: User },
   ];
 
@@ -69,11 +72,13 @@ function Sidebar({ userProfile }) {
   return (
     <>
       {/* Desktop Sidebar (Always Expanded) */}
-      <aside className="hidden md:flex flex-col fixed left-0 top-0 h-full bg-black text-white w-64 border-r border-gray-800 z-50">
+      <aside className={`hidden md:flex flex-col fixed left-0 top-0 h-full bg-black text-white border-r border-gray-800 z-50 transition-all duration-300 ${isCollapsed ? 'w-20' : 'w-60'}`}>
         {/* Logo */}
         <div className="p-6 pb-8">
-          <div className="flex items-center">
-            <h1 className="text-2xl font-bold tracking-tight">Cactus</h1>
+          <div className={`flex items-center ${isCollapsed ? 'justify-center' : ''}`}>
+            <h1 className="text-2xl font-bold tracking-tight">
+              {isCollapsed ? 'c' : 'cactus'}
+            </h1>
           </div>
         </div>
 
@@ -85,7 +90,7 @@ function Sidebar({ userProfile }) {
                 <NavLink
                   to={to}
                   className={({ isActive }) => `
-                    flex items-center gap-4 px-3 py-3 rounded-lg transition-all
+                    flex items-center py-3 rounded-lg transition-all ${isCollapsed ? 'justify-center' : 'gap-4 px-3'}
                     ${isActive 
                       ? 'bg-white/10 font-semibold' 
                       : 'hover:bg-white/5'
@@ -93,7 +98,7 @@ function Sidebar({ userProfile }) {
                   `}
                 >
                   <Icon className="w-6 h-6" />
-                  <span>{label}</span>
+                  <span className={isCollapsed ? 'hidden' : ''}>{label}</span>
                 </NavLink>
               </li>
             ))}
@@ -102,16 +107,17 @@ function Sidebar({ userProfile }) {
             {roleLinks.length > 0 && (
               <>
                 <li className="pt-4 pb-2">
-                  <span className="text-xs text-gray-400 uppercase tracking-wider px-3">
+                  <span className={`text-xs text-gray-400 uppercase tracking-wider text-center ${isCollapsed ? 'hidden' : 'px-3'}`}>
                     {userProfile.role}
                   </span>
+                  {isCollapsed && <hr className="border-t border-gray-700 mx-auto w-1/2" />}
                 </li>
                 {roleLinks.map(({ to, label, icon: Icon }) => (
                   <li key={to}>
                     <NavLink
                       to={to}
                       className={({ isActive }) => `
-                        flex items-center gap-4 px-3 py-3 rounded-lg transition-all
+                        flex items-center py-3 rounded-lg transition-all ${isCollapsed ? 'justify-center' : 'gap-4 px-3'}
                         ${isActive 
                           ? 'bg-white/10 font-semibold' 
                           : 'hover:bg-white/5'
@@ -119,7 +125,7 @@ function Sidebar({ userProfile }) {
                       `}
                     >
                       <Icon className="w-6 h-6" />
-                      <span>{label}</span>
+                      <span className={isCollapsed ? 'hidden' : ''}>{label}</span>
                     </NavLink>
                   </li>
                 ))}
@@ -129,19 +135,19 @@ function Sidebar({ userProfile }) {
         </nav>
 
         {/* Bottom Menu */}
-        <div className="p-3 border-t border-white/10">
+        <div className="p-3 border-t border-white/10 mt-auto" style={{ paddingBottom: '10px' }}>
           <div className="relative">
             <button
-              onClick={() => setShowMoreMenu(!showMoreMenu)}
-              className="flex items-center gap-4 w-full px-3 py-3 rounded-lg hover:bg-white/5 transition-all"
+              onClick={() => !isCollapsed && setShowMoreMenu(!showMoreMenu)}
+              className={`flex items-center w-full px-3 py-3 rounded-lg hover:bg-white/5 transition-all ${isCollapsed ? 'justify-center' : 'gap-4'}`}
             >
               <Menu className="w-6 h-6" />
-              <span className="flex-1 text-left">Más</span>
-              <ChevronDown className={`w-4 h-4 transition-transform ${showMoreMenu ? 'rotate-180' : ''}`} />
+              <span className={`flex-1 text-left ${isCollapsed ? 'hidden' : ''}`}>Más</span>
+              {!isCollapsed && <ChevronDown className={`w-4 h-4 transition-transform ${showMoreMenu ? 'rotate-180' : ''}`} />}
             </button>
 
             {/* Dropdown Menu */}
-            {showMoreMenu && (
+            {showMoreMenu && !isCollapsed && (
               <div className="absolute bottom-full left-0 w-full mb-2 bg-gray-900 rounded-lg shadow-xl border border-white/10 overflow-hidden">
                 <button className="flex items-center gap-4 w-full px-4 py-3 hover:bg-white/5 transition-all text-left">
                   <Settings className="w-5 h-5" />
@@ -156,7 +162,7 @@ function Sidebar({ userProfile }) {
                   <span>Cambiar aspecto</span>
                 </button>
                 <div className="border-t border-white/10">
-                  <button 
+                  <button
                     onClick={handleLogout}
                     className="flex items-center gap-4 w-full px-4 py-3 hover:bg-white/5 transition-all text-left text-red-400"
                   >
@@ -167,11 +173,18 @@ function Sidebar({ userProfile }) {
               </div>
             )}
           </div>
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className={`flex items-center w-full px-3 py-3 rounded-lg hover:bg-white/5 transition-all mt-2 ${isCollapsed ? 'justify-center' : 'gap-4'}`}
+          >
+            <Menu className={`w-6 h-6 transition-transform ${isCollapsed ? 'rotate-180' : ''}`} />
+            <span className={isCollapsed ? 'hidden' : ''}>Colapsar</span>
+          </button>
         </div>
       </aside>
 
       {/* Spacer for desktop */}
-      <div className="hidden md:block w-64"></div>
+      <div className={`hidden md:block transition-all duration-300 ${isCollapsed ? 'w-20' : 'w-60'}`}></div>
 
       {/* Mobile Bottom Bar */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-black border-t border-gray-800 z-50">

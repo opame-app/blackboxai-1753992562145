@@ -15,10 +15,13 @@ import InfluencerDashboard from './components/Dashboard/InfluencerDashboard.js';
 import AdminDashboard from './components/Dashboard/AdminDashboard.js';
 import MyProfile from './components/Profile/MyProfile.js';
 import UserProfile from './components/Profile/UserProfile.js';
+import FollowersPage from './components/Profile/FollowersPage.js';
+import FollowingPage from './components/Profile/FollowingPage.js';
 import SeedData from './components/Admin/SeedData.js';
 import AutoSeed from './components/AutoSeed.js';
 import AutoSeedOffers from './components/AutoSeedOffers.js';
 import RestaurantDetail from './components/Dashboard/RestaurantDetail.js';
+import RestaurantsList from './components/Dashboard/RestaurantsList.js';
 import JobOfferDetail from './components/Dashboard/JobOfferDetail.js';
 import NotFound from './components/Common/NotFound.js';
 import PrivateRoute from './components/Common/PrivateRoute.js';
@@ -210,7 +213,17 @@ function App() {
               } />
               <Route path="/profile/:userId" element={
                 <PrivateRoute user={user} userProfile={userProfile}>
-                  <UserProfile />
+                  <UserProfile user={user} userProfile={userProfile} />
+                </PrivateRoute>
+              } />
+              <Route path="/profile/:userId/followers" element={
+                <PrivateRoute user={user} userProfile={userProfile}>
+                  <FollowersPage />
+                </PrivateRoute>
+              } />
+              <Route path="/profile/:userId/following" element={
+                <PrivateRoute user={user} userProfile={userProfile}>
+                  <FollowingPage />
                 </PrivateRoute>
               } />
               <Route path="/home" element={
@@ -241,6 +254,11 @@ function App() {
               <Route path="/offers-feed" element={
                 <PrivateRoute user={user} userProfile={userProfile}>
                   <OffersFeed user={user} userProfile={userProfile} />
+                </PrivateRoute>
+              } />
+              <Route path="/explore" element={
+                <PrivateRoute user={user} userProfile={userProfile}>
+                  <RestaurantsList />
                 </PrivateRoute>
               } />
               <Route path="/restaurant/:id" element={

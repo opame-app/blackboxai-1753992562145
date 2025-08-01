@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import JobOfferForm from './JobOfferForm.js';
 import ActivityFeed from '../Common/ActivityFeed.js';
+import { getRestaurantsByOwner } from '../../services/restaurantService.js';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -19,14 +21,35 @@ import {
   Clock,
   CreditCard,
   Utensils,
-  Star
+  Star,
+  Store,
+  MapPin
 } from 'lucide-react';
 
 function OwnerDashboard({ user, userProfile }) {
   const [showJobDialog, setShowJobDialog] = useState(false);
+  const [restaurants, setRestaurants] = useState([]);
+  const [loadingRestaurants, setLoadingRestaurants] = useState(true);
 
   const openJobDialog = () => setShowJobDialog(true);
   const closeJobDialog = () => setShowJobDialog(false);
+
+  useEffect(() => {
+    const fetchRestaurants = async () => {
+      if (user?.uid) {
+        try {
+          const data = await getRestaurantsByOwner(user.uid);
+          setRestaurants(data);
+        } catch (error) {
+          console.error('Error fetching restaurants:', error);
+        } finally {
+          setLoadingRestaurants(false);
+        }
+      }
+    };
+
+    fetchRestaurants();
+  }, [user?.uid]);
 
   // Datos de ejemplo para las métricas
   const metrics = {
@@ -68,6 +91,87 @@ function OwnerDashboard({ user, userProfile }) {
 
       <div className="p-6">
 
+        {/* My Restaurants Section */}
+        <div className="mt-8">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+            <div className="p-6 border-b border-gray-100">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">Mis Restaurantes</h3>
+                <Link 
+                  to="/restaurants"
+                  className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+                >
+                  Ver todos los restaurantes
+                </Link>
+              </div>
+            </div>
+            <div className="p-6">
+              {loadingRestaurants ? (
+                <div className="flex justify-center py-8">
+                  <div className="w-6 h-6 border-2 border-gray-300 border-t-indigo-600 rounded-full animate-spin"></div>
+                </div>
+              ) : restaurants.length === 0 ? (
+                <div className="text-center py-8">
+                  <Store className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <h4 className="text-lg font-medium text-gray-900 mb-2">No tienes restaurantes registrados</h4>
+                  <p className="text-gray-600 mb-4">Agrega tu primer restaurante para comenzar a gestionar tu negocio</p>
+                  <button className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+                    Agregar Restaurante
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {restaurants.slice(0, 3).map((restaurant) => (
+                    <Link
+                      key={restaurant.id}
+                      to={`/restaurant/${restaurant.id}`}
+                      className="block p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow group"
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <h4 className="font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">
+                          {restaurant.name}
+                        </h4>
+                        <div className="flex items-center space-x-1">
+                          {restaurant.published ? (
+                            <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                              Publicado
+                            </span>
+                          ) : (
+                            <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full">
+                              Borrador
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center text-gray-600 mb-2">
+                        <MapPin className="w-4 h-4 mr-1" />
+                        <span className="text-sm">{restaurant.address}, {restaurant.city}</span>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-500">
+                          {restaurant.type || 'Tipo no especificado'}
+                        </span>
+                        <div className="flex items-center space-x-2">
+                          {restaurant.openForBusiness ? (
+                            <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                          ) : (
+                            <span className="w-2 h-2 bg-red-500 rounded-full"></span>
+                          )}
+                          <span className="text-xs text-gray-500">
+                            {restaurant.openForBusiness ? 'Abierto' : 'Cerrado'}
+                          </span>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
         {/* Sección de acciones rápidas */}
         <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <button 
@@ -86,7 +190,10 @@ function OwnerDashboard({ user, userProfile }) {
             <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600" />
           </button>
 
-          <button className="flex items-center justify-between p-4 bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow group">
+          <Link 
+            to="/search"
+            className="flex items-center justify-between p-4 bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow group"
+          >
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
                 <Search className="w-5 h-5 text-green-600" />
@@ -97,20 +204,23 @@ function OwnerDashboard({ user, userProfile }) {
               </div>
             </div>
             <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600" />
-          </button>
+          </Link>
 
-          <button className="flex items-center justify-between p-4 bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow group">
+          <Link 
+            to="/restaurants"
+            className="flex items-center justify-between p-4 bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow group"
+          >
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                <Package className="w-5 h-5 text-purple-600" />
+                <Store className="w-5 h-5 text-purple-600" />
               </div>
               <div className="text-left">
-                <p className="text-sm font-semibold text-gray-900">Proveedores</p>
-                <p className="text-xs text-gray-500">Gestiona tus contactos</p>
+                <p className="text-sm font-semibold text-gray-900">Ver Restaurantes</p>
+                <p className="text-xs text-gray-500">Explora la comunidad</p>
               </div>
             </div>
             <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600" />
-          </button>
+          </Link>
 
           <button className="flex items-center justify-between p-4 bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow group">
             <div className="flex items-center space-x-3">

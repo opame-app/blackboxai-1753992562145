@@ -1,0 +1,633 @@
+rules_version = '2';
+service cloud.firestore {
+	match /databases/{database}/documents {
+
+  	function isUpdateValid() {
+      let cannotBePrepared = (resource.data.status == 'moved' || resource.data.status == 'discarded');
+      let updatePreparationStatus = (request.resource.data.status != 'moved' && request.resource.data.status != 'discarded');
+      return !(cannotBePrepared && updatePreparationStatus);
+    }
+
+  	function returnShopID() {
+    	// returns the shopID of a resource for non creation events
+      return resource.data.shop[4]
+    }
+
+    function returnOrganizationID() {
+    	// returns the organizationID of a resource for non creation events
+      return resource.data.organization[4]
+    }
+
+    function isUserReadAllData() {
+    	return 'readAllData' in request.auth.token
+      		&& request.auth.token.readAllData == true;
+    }
+
+    function isUserWriteAllData() {
+    	return 'writeAllData' in request.auth.token
+      		&& request.auth.token.writeAllData == true;
+    }
+
+  	function isReadFromConsumer() {
+    	let consumer = /databases/$(database)/documents/consumers/$(request.auth.uid);
+      return 'consumer' in resource.data
+      		&& resource.data.consumer == consumer;
+    }
+
+    function isWriteForConsumer() {
+    	return 'consumer' in request.resource.data;
+      		//&& true;//request.resource.data.consumer.path.matches('.*');
+    }
+
+    function isDocFromStaffShop() {
+    	// compares shopID in resource with shopID in claims
+      let shopID = returnShopID();
+    	return shopID in request.auth.token.shops || shopID == request.auth.token.shop;
+    }
+
+    function isDocForStaffShop(shopID) {
+      // evaluates staff resources creation
+    	let shopInAuth = ('shops' in request.auth.token && shopID in request.auth.token.shops.keys()) || 'shop' in request.auth.token && request.auth.token.shop == shopID;
+    	let shopInResource = 'shop' in request.resource.data && request.resource.data.shop == /databases/$(database)/documents/shops/$(shopID);
+    	return shopInAuth && shopInResource;
+    }
+
+    function isDocFromStaffOrganization() {
+    	// compares organizationID in resource with organizationID in claims
+      let organizationID = returnOrganizationID();
+    	return organizationID in request.auth.token.orgs;
+    }
+
+    function isDocForStaffOrganization(organizationID) {
+      // evaluates staff resources creation
+    	let organizationInAuth = ('shops' in request.auth.token && organizationID in request.auth.token.orgs.keys());
+    	let organizationInResource = 'shop' in request.resource.data && request.resource.data.organization == /databases/$(database)/documents/organizations/$(organizationID);
+    	return organizationInAuth && organizationInResource;
+    }
+
+    function isDraftOrder() {
+    	return 'status' in request.resource.data
+      		&& (request.resource.data.status == "draft" || request.resource.data.status == 'unconfirmed');
+    }
+
+    function isDiscardedOrder() {
+    	return 'status' in request.resource.data
+      		&& request.resource.data.status == "discarded";
+    }
+
+    function isSignedIn() { return request.auth != null; }
+
+    // function docExists() {
+    // 	return exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    // }
+
+    match /{document=**} {
+    	allow read: if isUserReadAllData();
+      allow write: if isUserWriteAllData();
+    }
+
+    match /consumers/{consumerID} {
+    	allow read: if request.auth.uid == consumerID;
+      allow write: if request.auth.uid == consumerID;
+    }
+
+    match /codes/{codeID} {
+    	allow read;
+    }
+
+    match /organizations/{organizationID} {
+      allow read: if organizationID in request.auth.token.orgs;
+      allow write: if false;
+
+      match /employees/{employeeID} {
+      	allow read: if organizationID in request.auth.token.orgs;
+        allow write: if false;
+      }
+
+      match /vendors/{vendorID} {
+      	allow read: if organizationID in request.auth.token.orgs;
+        allow write: if false;
+      }
+
+      match /asset_accounts/{assetAccountID} {
+      	allow read: if organizationID in request.auth.token.orgs;
+        allow write: if false;
+      }
+
+      match /liability_accounts/{liabilityAccountID} {
+      	allow read: if organizationID in request.auth.token.orgs;
+        allow write: if false;
+      }
+
+      match /income_accounts/{incomeAccountID} {
+      	allow read: if organizationID in request.auth.token.orgs;
+        allow write: if false;
+      }
+
+      match /expense_accounts/{expenseAccountID} {
+      	allow read: if organizationID in request.auth.token.orgs;
+        allow write: if false;
+      }
+
+      match /ledger_transactions/{transactionID} {
+      	allow read: if organizationID in request.auth.token.orgs;
+        allow write: if false;
+      }
+    }
+
+    match /{path=**}/payments/{paymentID} {
+    	allow read: if isSignedIn();
+    }
+
+    match /releases/{releaseID} {
+    	allow read;
+      allow write: if request.auth != null && request.auth.uid.matches('^circleci@.+\\.iam\\.gserviceaccount\\.com$');
+    }
+
+    match /favorite_shops/{favoriteShopID} {
+      allow read: if isReadFromConsumer();
+      //allow write: if isWriteForConsumer();
+      allow create: if isWriteForConsumer();
+      allow delete: if isReadFromConsumer();
+    }
+
+    match /market_countries/{marketCountryID} {
+    	allow read: if true;
+      allow write: if false;
+    }
+
+    match /promotions/{promotionID} {
+    	allow read: if true;
+      allow write: if false;
+    }
+
+    match /invoices/{invoiceID} {
+      allow read: if isSignedIn() && (isReadFromConsumer() || isDocFromStaffShop());
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    match /orders/{orderID} {
+      allow read: if true;
+      allow create: if isSignedIn()
+      							&& (isDraftOrder() && isWriteForConsumer());
+      allow update: if isSignedIn()
+      							&& (isDraftOrder() || isDiscardedOrder() || isDocFromStaffShop());
+      allow delete: if false;
+
+      match /payments/{paymentID} {
+      	// TO-DO: write proper security rule for order payments reading
+      	allow read: if isSignedIn()
+                    && (isReadFromConsumer() || true);
+        allow write: if false;
+      }
+
+      match /products/{productID} {
+      	allow read: if true;
+        allow create: if isSignedIn()
+        							&& isWriteForConsumer();
+        allow update: if isSignedIn()
+        							&& (isReadFromConsumer() || isDocFromStaffShop());
+        allow delete: if false;
+      }
+    }
+
+    match /open_tables/{openTableID} {
+    	allow read;
+      allow write: if isSignedIn();
+
+      match /payments/{paymentID} {
+        allow read: if isSignedIn();
+        allow write: if isSignedIn();
+      }
+
+      match /products/{productID} {
+				allow read;
+        allow create;
+        allow update: if isUpdateValid();
+        allow delete: if isSignedIn();
+      }
+
+      match /service_items/{serviceItemID} {
+				allow read;
+        allow write;
+        allow delete: if isSignedIn();
+      }
+
+      match /checks/{checkID} {
+				allow read;
+        allow write;
+        allow delete: if isSignedIn();
+      }
+
+      match /checks/{checkID} {
+				allow read;
+        allow write: if isSignedIn();
+      }
+
+      match /live_drafts/{draftID} {
+				allow read;
+        allow write: if isSignedIn();
+      }
+    }
+
+    match /payment_processors/{paymentProcessorID} {
+    	allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    match /messages/{messageID} {
+      allow read: if isSignedIn();
+      allow write: if true;
+    }
+
+    match /staff_shops/{staffShopsID} {
+      // if user has user management privileges or if user want's only his own staff_shop document
+    	allow read: if isSignedIn() && (isDocFromStaffShop() || /databases/$(database)/documents/staff/$(request.auth.uid) == resource.data.staff);
+      allow write: if isSignedIn();
+    }
+
+    match /email_subscriptions/{email_subscriptionID} {
+    	allow read: if get(/databases/$(database)/documents/staff/$(request.auth.uid)).data['email'] in resource.data['subscribers'];
+      allow write: if false;
+    }
+
+    match /{path=**}/tables/{shopTableID} {
+      allow read: if true;
+    }
+
+
+    match /shops/{shopID} {
+    	allow read;
+      allow create: if false;
+      // allow update: if request.auth.token.shop == shopID;
+      allow update: if isSignedIn() && (request.auth.token.shop == shopID || request.auth.token['shops'][shopID].matches(".*[APQY].*"));
+      allow delete: if false;
+
+      match /categories/{categoryID} {
+        allow read;
+        allow create: if isSignedIn()
+        							&& isDocForStaffShop(shopID);
+        allow update: if isSignedIn()
+        							&& isDocFromStaffShop();
+        allow delete: if isSignedIn()
+        							&& isDocFromStaffShop();
+      }
+
+      match /roles/{roleID} {
+    		allow read: if isSignedIn() && (request.auth.token.shop == shopID || request.auth.token['shops'][shopID].matches(".*[AUu].*"));
+      	allow write: if false;
+    	}
+
+      match /payment_accounts/{paymentAccountID} {
+        allow read;
+        allow write: if isDocForStaffShop(shopID);
+
+        match /access_tokens/{accessTokenID} {
+        	allow read: if false;
+       		allow write: if false;
+        }
+      }
+
+      match /subscriptions/{subscriptionID} {
+        allow read: if isDocFromStaffShop();
+        allow write: if false;
+      }
+
+      match /menu_items/{productID} {
+        allow read;
+        allow create: if isSignedIn()
+        							&& isDocForStaffShop(shopID);
+        allow update: if isSignedIn()
+        							&& isDocFromStaffShop();
+        allow delete: if isSignedIn()
+        							&& isDocFromStaffShop();
+      }
+
+      match /modifiers/{productID} {
+        allow read;
+        allow create: if isSignedIn()
+        							&& isDocForStaffShop(shopID);
+        allow update: if isSignedIn()
+        							&& isDocFromStaffShop();
+        allow delete: if isSignedIn()
+        							&& isDocFromStaffShop();
+      }
+
+      match /packages/{productID} {
+        allow read;
+        allow create: if isSignedIn()
+        							&& isDocForStaffShop(shopID);
+        allow update: if isSignedIn()
+        							&& isDocFromStaffShop();
+        allow delete: if isSignedIn()
+        							&& isDocFromStaffShop();
+      }
+
+      match /products/{productID} {
+        allow read;
+        allow create: if isSignedIn()
+        							&& isDocForStaffShop(shopID);
+        allow update: if isSignedIn()
+        							&& isDocFromStaffShop();
+        allow delete: if isSignedIn()
+        							&& isDocFromStaffShop();
+      }
+
+      match /preparations/{productID} {
+        allow read;
+        allow create: if isSignedIn()
+        							&& isDocForStaffShop(shopID);
+        allow update: if isSignedIn()
+        							&& isDocFromStaffShop();
+        allow delete: if isSignedIn()
+        							&& isDocFromStaffShop();
+      }
+
+      match /add_ons/{productID} {
+        allow read;
+        allow create: if isSignedIn()
+        							&& isDocForStaffShop(shopID);
+        allow update: if isSignedIn()
+        							&& isDocFromStaffShop();
+        allow delete: if isSignedIn()
+        							&& isDocFromStaffShop();
+      }
+
+      match /optionals/{productID} {
+        allow read;
+        allow create: if isSignedIn()
+        							&& isDocForStaffShop(shopID);
+        allow update: if isSignedIn()
+        							&& isDocFromStaffShop();
+        allow delete: if isSignedIn()
+        							&& isDocFromStaffShop();
+      }
+
+      match /promotions/{promotionID} {
+        allow read;
+        allow write: if isSignedIn()
+        							&& isDocForStaffShop(shopID);
+        //allow update: if isSignedIn()
+        	//						&& isDocFromStaffShop();
+       // allow delete: if isSignedIn()
+        //							&& isDocFromStaffShop();
+    	}
+
+      match /tables/{shopTableID} {
+        allow read: if true;
+        allow write: if isSignedIn()
+        							&& isDocForStaffShop(shopID);
+        //allow update: if isSignedIn()
+        	//						&& isDocFromStaffShop();
+        allow delete: if isSignedIn()
+        							&& isDocFromStaffShop();
+    	}
+
+      match /preparation_zones/{preparationZoneID} {
+        allow read;
+        allow write: if isSignedIn()
+        							&& isDocForStaffShop(shopID);
+        //allow update: if isSignedIn()
+        	//						&& isDocFromStaffShop();
+        allow delete: if isSignedIn()
+        							&& isDocFromStaffShop();
+    	}
+
+      match /dispatch_zones/{dispatchZoneID} {
+        allow read;
+        allow write: if isSignedIn()
+        							&& isDocForStaffShop(shopID);
+        //allow update: if isSignedIn()
+        	//						&& isDocFromStaffShop();
+        allow delete: if isSignedIn()
+        							&& isDocFromStaffShop();
+    	}
+
+      match /table_zones/{tableZoneID} {
+        allow read;
+        allow write: if isSignedIn()
+        							&& isDocForStaffShop(shopID);
+        //allow update: if isSignedIn()
+        	//						&& isDocFromStaffShop();
+        allow delete: if isSignedIn()
+        							&& isDocFromStaffShop();
+    	}
+
+      match /service_items/{serviceItemID} {
+        allow read;
+        allow write: if isSignedIn()
+        							&& isDocForStaffShop(shopID);
+        //allow update: if isSignedIn()
+        	//						&& isDocFromStaffShop();
+        allow delete: if isSignedIn()
+        							&& isDocFromStaffShop();
+    	}
+
+      match /registered_devices/{registeredDeviceID} {
+        allow read;
+        allow write: if isSignedIn()
+        							&& isDocForStaffShop(shopID);
+        allow delete: if isSignedIn()
+        							&& isDocFromStaffShop();
+    	}
+
+      match /shifts/{shiftID} {
+      allow read: if true;
+        // allow read: if isSignedIn() && (request.auth.token.shop == shopID || request.auth.token['shops'][shopID].matches(".*A.*"));
+      	allow write: if false;
+
+        match /products/{productID} {
+          allow read: if true;
+          allow write: if false;
+        }
+
+        match /pos_shifts/{posShiftID} {
+          allow read: if true;
+          allow write: if false;
+        }
+
+      }
+
+      match /movements/{movementID} {
+        allow read: if isDocFromStaffShop();
+        allow write: if false;
+      }
+
+      match /kitchen_orders/{kotID} {
+        allow read: if isDocFromStaffShop();
+        allow write: if isDocFromStaffShop();
+      }
+
+      match /menu_items/{productID} {
+        allow read;
+        allow create: if isSignedIn()
+        							&& isDocForStaffShop(shopID);
+        allow update: if isSignedIn()
+        							&& isDocFromStaffShop();
+        allow delete: if isSignedIn()
+        							&& isDocFromStaffShop();
+      }
+
+      match /modifiers/{productID} {
+        allow read;
+        allow create: if isSignedIn()
+        							&& isDocForStaffShop(shopID);
+        allow update: if isSignedIn()
+        							&& isDocFromStaffShop();
+        allow delete: if isSignedIn()
+        							&& isDocFromStaffShop();
+      }
+
+      match /preparation_products/{productID} {
+        allow read;
+        allow create: if isSignedIn()
+        							&& isDocForStaffShop(shopID);
+        allow update: if isSignedIn()
+        							&& isDocFromStaffShop();
+        allow delete: if isSignedIn()
+        							&& isDocFromStaffShop();
+      }
+
+      match /pos/{posID} {
+        allow read;
+        allow create: if isSignedIn()
+        							&& isDocForStaffShop(shopID);
+        allow update: if isSignedIn()
+        							&& isDocFromStaffShop();
+        allow delete: if isSignedIn()
+        							&& isDocFromStaffShop();
+      }
+
+  	}
+
+    match /translations/{translationID} {
+      allow read;
+    }
+
+    match /staff/{staffID} {
+    	allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    match /subscription_tiers/{staffID} {
+    	allow read: if true;
+      allow write: if false;
+    }
+
+    match /support_form/{supportFormID} {
+    	allow read: if false;
+      allow write: if isSignedIn();
+    }
+
+    match /scheduledTasks/{scheduledTaskID} {
+    	allow read;
+      allow write: if false;
+    }
+
+    // New rules for users, followers, and following
+    match /users/{userId} {
+      // Allow authenticated users to read any user profile
+      allow read: if request.auth != null;
+      // Only allow users to write to their own profile
+      allow write: if request.auth != null && request.auth.uid == userId;
+
+      // Rules for the 'following' subcollection
+      match /following/{targetUserId} {
+        // Allow the user to read their own following list
+        allow read: if request.auth != null && request.auth.uid == userId;
+        // Allow the user to follow/unfollow others
+        allow create, delete: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // Rules for the 'followers' subcollection
+      match /followers/{followerId} {
+        // Allow anyone to read followers list (for public profiles)
+        allow read: if request.auth != null;
+        // Allow users to add/remove themselves from followers
+
+     // Reglas para publicaciones (posts)
+=======
+        allow create, delete: if request.auth != null && request.auth.uid == followerId;
+      }
+    }
+
+     // Reglas para publicaciones (posts)
+=======
+
+     // Reglas para publicaciones (posts)
+    match /posts/{postId} {
+      // Cualquiera puede leer publicaciones
+      allow read: if true;
+      // Solo usuarios autenticados pueden crear publicaciones
+      allow create: if request.auth != null;
+      // Solo el autor puede modificar su publicación
+      allow update: if request.auth != null;
+      // Solo el autor puede eliminar su publicación
+      allow delete: if request.auth != null && request.auth.uid == resource.data.userId;
+    }
+    
+    // Reglas para ofertas de trabajo
+    match /jobOffers/{jobOfferId} {
+      // Cualquiera puede leer ofertas de trabajo activas
+      allow read: if true;
+      // Solo usuarios autenticados pueden crear ofertas
+      allow create: if request.auth != null;
+      // Solo el propietario puede modificar su oferta
+      allow update: if request.auth != null && request.auth.uid == resource.data.ownerId;
+      // Solo el propietario puede eliminar su oferta
+      allow delete: if request.auth != null && request.auth.uid == resource.data.ownerId;
+    }
+    
+    // Reglas para conversaciones
+    match /conversations/{conversationId} {
+      // Solo los participantes pueden leer la conversación
+      allow read: if request.auth != null && request.auth.uid in resource.data.participants;
+      // Solo usuarios autenticados pueden crear conversaciones
+      allow create: if request.auth != null && request.auth.uid in request.resource.data.participants;
+      // Solo los participantes pueden actualizar la conversación
+      allow update: if request.auth != null && request.auth.uid in resource.data.participants;
+      // No se permite eliminar conversaciones
+      allow delete: if false;
+      
+      // Reglas para mensajes dentro de conversaciones
+      match /messages/{messageId} {
+        // Solo los participantes de la conversación pueden leer mensajes
+        allow read: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+        // Solo los participantes pueden enviar mensajes
+        allow create: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+        // Solo el autor del mensaje puede modificarlo
+        allow update: if request.auth != null && request.auth.uid == resource.data.senderId;
+        // Solo el autor puede eliminar su mensaje
+        allow delete: if request.auth != null && request.auth.uid == resource.data.senderId;
+      }
+    }
+    
+    // Reglas para actividades
+    match /activities/{activityId} {
+      // Solo usuarios autenticados pueden leer actividades
+      allow read: if request.auth != null;
+      // Solo usuarios autenticados pueden crear actividades
+      allow create: if request.auth != null;
+      // Solo el propietario puede modificar su actividad
+      allow update: if request.auth != null && request.auth.uid == resource.data.userId;
+      // Solo el propietario puede eliminar su actividad
+      allow delete: if request.auth != null && request.auth.uid == resource.data.userId;
+    }
+    
+    // Reglas para restaurantes
+    match /restaurants/{restaurantId} {
+      // Cualquiera puede leer información de restaurantes
+      allow read: if true;
+      // Solo usuarios autenticados pueden crear restaurantes
+      allow create: if request.auth != null;
+      // Solo el propietario puede modificar su restaurante
+      allow update: if request.auth != null && 
+                     ('ownerId' in resource.data && request.auth.uid == resource.data.ownerId);
+      // Solo el propietario puede eliminar su restaurante
+      allow delete: if request.auth != null && 
+                     ('ownerId' in resource.data && request.auth.uid == resource.data.ownerId);
+    }
+	}
+}
