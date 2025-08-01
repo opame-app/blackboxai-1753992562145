@@ -1,5 +1,5 @@
 import React from 'react';
-import ActivityFeed from '../Common/ActivityFeed';
+import ActivityFeed from '../Common/ActivityFeed.js';
 
 function InfluencerDashboard({ user, userProfile }) {
   return (

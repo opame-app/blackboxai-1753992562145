@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { createUserProfile } from '../../services/userService';
+import { createUserProfile } from '../../services/userService.js';
 import { useNavigate } from 'react-router-dom';
 
 function SignUpForm({ user, setUserProfile }) {

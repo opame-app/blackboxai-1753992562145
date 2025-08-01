@@ -1,5 +1,5 @@
 import { collection, addDoc, getDocs, query, where, orderBy, doc, updateDoc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db } from '../firebase.js';
 
 export const createJobOffer = async (jobData) => {
   try {

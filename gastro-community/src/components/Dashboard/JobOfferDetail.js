@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { getJobOfferById } from '../../services/jobService';
+import { getJobOfferById } from '../../services/jobService.js';
 
 function JobOfferDetail() {
   const { id } = useParams();

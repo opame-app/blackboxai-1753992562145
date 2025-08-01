@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { createJobOffer } from '../../services/jobService';
-import { logActivity } from '../../services/activityService';
+import { createJobOffer } from '../../services/jobService.js';
+import { logActivity } from '../../services/activityService.js';
 
 function JobOfferForm({ user, onJobCreated }) {
   const [formData, setFormData] = useState({

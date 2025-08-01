@@ -1,5 +1,5 @@
 import { doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db } from '../firebase.js';
 
 export const updateUserStatus = async (userId, isAvailable) => {
   try {

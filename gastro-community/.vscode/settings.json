@@ -1,0 +1,9 @@
+{
+  "path-autocomplete.extensionOnImport": true,
+  "path-autocomplete.pathMappings": {
+    "@": "${workspaceRoot}/src"
+  },
+  "javascript.preferences.importModuleSpecifier": "relative",
+  "path-autocomplete.includeFileExtension": true,
+  "path-autocomplete.extensionPriority": [".js", ".jsx"]
+}

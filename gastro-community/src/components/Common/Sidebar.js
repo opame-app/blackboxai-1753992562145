@@ -1,129 +1,210 @@
-import React from 'react';
-import { NavLink } from 'react-router-dom';
+import React, { useState } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { signOut } from 'firebase/auth';
+import { auth } from '../../firebase.js';
+import { 
+  Home, 
+  Search, 
+  Compass, 
+  MessageCircle, 
+  Heart, 
+  PlusSquare, 
+  User,
+  Settings,
+  Bookmark,
+  Moon,
+  LogOut,
+  Users,
+  Package,
+  Briefcase,
+  ShieldCheck,
+  Menu, // Keep Menu for the "More" button
+  ChevronDown
+} from 'lucide-react';
 
 function Sidebar({ userProfile }) {
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const navigate = useNavigate();
+
   if (!userProfile) return null;
 
-  const links = [
-    { to: '/home', label: 'Inicio', icon: '🏡' },
-    { to: '/dashboard', label: 'Panel', icon: '🏠' },
+  const handleLogout = async () => {
+    if (window.confirm('¿Estás seguro de que quieres cerrar sesión?')) {
+      try {
+        await signOut(auth);
+        navigate('/signin');
+      } catch (error) {
+        console.error('Error al cerrar sesión:', error);
+      }
+    }
+  };
+
+  const mainLinks = [
+    { to: '/home', label: 'Inicio', icon: Home },
+    { to: '/search', label: 'Buscar', icon: Search },
+    { to: '/explore', label: 'Explorar', icon: Compass },
+    { to: '/messages', label: 'Mensajes', icon: MessageCircle },
+    { to: '/notifications', label: 'Notificaciones', icon: Heart },
+    { to: '/create', label: 'Crear', icon: PlusSquare },
+    { to: '/profile', label: 'Perfil', icon: User },
   ];
 
+  const roleLinks = [];
+  
   if (userProfile.role === 'dueño de restaurant') {
-    links.push({ to: '/owner-employed-view', label: 'Empleados', icon: '🧑🏻‍💼' });
-    links.push({ to: '/owner-supplier-view', label: 'Proveedores', icon: '📦' });
-    // links.push({ to: '/create-restaurant', label: 'Gestionar', icon: '⚙️' });
-    // links.push({ to: '/job-offer-form', label: 'Ofertas de Trabajo', icon: '📋' });
+    roleLinks.push({ to: '/empleados', label: 'Empleados', icon: Users });
+    roleLinks.push({ to: '/proveedores', label: 'Proveedores', icon: Package });
   }
 
   if (userProfile.role === 'empleado') {
-    links.push({ to: '/offers-feed', label: 'Ofertas de Trabajo', icon: '📋' });
+    roleLinks.push({ to: '/offers-feed', label: 'Ofertas', icon: Briefcase });
   }
-
-  if (userProfile.role === 'restaurant') {
-    links.push({ to: '/restaurant-list', label: 'Restaurants', icon: '🍽️' });
-  }
-
-  // if (userProfile.role === 'proveedor') {
-  //   links.push({ to: '/supplier-profile', label: 'Perfil Proveedor', icon: '📦' });
-  // }
-
-  // if (userProfile.role === 'influencer') {
-  //   links.push({ to: '/influencer-dashboard', label: 'Dashboard Influencer', icon: '⭐' });
-  // }
 
   if (userProfile.isAdmin) {
-    links.push({ to: '/admin-dashboard', label: 'Dashboard Admin', icon: '🛠️' });
+    roleLinks.push({ to: '/admin/seed-data', label: 'Seed Data', icon: ShieldCheck });
   }
 
-  links.push({ to: '/profile', label: 'Perfil', icon: '👤' });
-  links.push({ to: '/logout', label: 'Cerrar sesión', icon: '🚪' });
-
   return (
-    <aside className="sidebar" style={{
-      backgroundColor: '#fff',
-      color: '#3c3c50',
-      height: '100vh',
-      padding: '1rem',
-      width: '220px',
-      borderRadius: '20px',
-      boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-      fontFamily: "'Inter', sans-serif",
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'space-between'
-    }}>
-      <div>
-        <div style={{
-          marginBottom: '2rem',
-          padding: '1rem',
-          background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
-          borderRadius: '12px',
-          textAlign: 'center',
-          fontWeight: 'bold',
-          fontSize: '1.25rem',
-          color: '#2c2c3c'
-        }}>
-          cactus<br />Invierno '25
-        </div>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          marginBottom: '1rem',
-          gap: '0.75rem'
-        }}>
-          <div style={{
-            width: '40px',
-            height: '40px',
-            backgroundColor: '#e0e0e0',
-            borderRadius: '8px'
-          }}>
-            {/* Placeholder for user avatar */}
-          </div>
-          <div>
-            <div style={{ fontWeight: 'bold', fontSize: '1rem', color: '#2c2c3c' }}>
-              {userProfile.displayName || 'Usuario'}
-            </div>
-            <div style={{
-              fontSize: '0.75rem',
-              color: '#8b8b9f',
-              textTransform: 'lowercase',
-              backgroundColor: '#e0e0e0',
-              borderRadius: '4px',
-              padding: '0 6px',
-              display: 'inline-block',
-              marginTop: '2px'
-            }}>
-              pro
-            </div>
+    <>
+      {/* Desktop Sidebar (Always Expanded) */}
+      <aside className="hidden md:flex flex-col fixed left-0 top-0 h-full bg-black text-white w-64 border-r border-gray-800 z-50">
+        {/* Logo */}
+        <div className="p-6 pb-8">
+          <div className="flex items-center">
+            <h1 className="text-2xl font-bold tracking-tight">Gastro</h1>
           </div>
         </div>
-        <nav>
-          <ul style={{ listStyle: 'none', padding: 0 }}>
-            {links.map(({ to, label, icon }) => (
-              <li key={to} style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', color: '#8b8b9f' }}>
-                <span style={{ fontSize: '1.25rem' }}>{icon}</span>
+
+        {/* Navigation Links */}
+        <nav className="flex-1 px-3">
+          <ul className="space-y-2">
+            {mainLinks.map(({ to, label, icon: Icon }) => (
+              <li key={to}>
                 <NavLink
                   to={to}
-                  style={({ isActive }) => ({
-                    color: isActive ? '#3c3c50' : '#8b8b9f',
-                    textDecoration: 'none',
-                    fontWeight: isActive ? '600' : '400',
-                    fontSize: '1rem',
-                    flexGrow: 1
-                  })}
+                  className={({ isActive }) => `
+                    flex items-center gap-4 px-3 py-3 rounded-lg transition-all
+                    ${isActive 
+                      ? 'bg-white/10 font-semibold' 
+                      : 'hover:bg-white/5'
+                    }
+                  `}
                 >
-                  {label}
+                  <Icon className="w-6 h-6" />
+                  <span>{label}</span>
                 </NavLink>
               </li>
             ))}
+
+            {/* Role specific links */}
+            {roleLinks.length > 0 && (
+              <>
+                <li className="pt-4 pb-2">
+                  <span className="text-xs text-gray-400 uppercase tracking-wider px-3">
+                    {userProfile.role}
+                  </span>
+                </li>
+                {roleLinks.map(({ to, label, icon: Icon }) => (
+                  <li key={to}>
+                    <NavLink
+                      to={to}
+                      className={({ isActive }) => `
+                        flex items-center gap-4 px-3 py-3 rounded-lg transition-all
+                        ${isActive 
+                          ? 'bg-white/10 font-semibold' 
+                          : 'hover:bg-white/5'
+                        }
+                      `}
+                    >
+                      <Icon className="w-6 h-6" />
+                      <span>{label}</span>
+                    </NavLink>
+                  </li>
+                ))}
+              </>
+            )}
           </ul>
         </nav>
-      </div>
-      <div style={{ fontSize: '0.875rem', color: '#8b8b9f', textAlign: 'center', marginTop: 'auto' }}>
-        © 2025 Cactus Community
-      </div>
-    </aside>
+
+        {/* Bottom Menu */}
+        <div className="p-3 border-t border-white/10">
+          <div className="relative">
+            <button
+              onClick={() => setShowMoreMenu(!showMoreMenu)}
+              className="flex items-center gap-4 w-full px-3 py-3 rounded-lg hover:bg-white/5 transition-all"
+            >
+              <Menu className="w-6 h-6" />
+              <span className="flex-1 text-left">Más</span>
+              <ChevronDown className={`w-4 h-4 transition-transform ${showMoreMenu ? 'rotate-180' : ''}`} />
+            </button>
+
+            {/* Dropdown Menu */}
+            {showMoreMenu && (
+              <div className="absolute bottom-full left-0 w-full mb-2 bg-gray-900 rounded-lg shadow-xl border border-white/10 overflow-hidden">
+                <button className="flex items-center gap-4 w-full px-4 py-3 hover:bg-white/5 transition-all text-left">
+                  <Settings className="w-5 h-5" />
+                  <span>Configuración</span>
+                </button>
+                <button className="flex items-center gap-4 w-full px-4 py-3 hover:bg-white/5 transition-all text-left">
+                  <Bookmark className="w-5 h-5" />
+                  <span>Guardados</span>
+                </button>
+                <button className="flex items-center gap-4 w-full px-4 py-3 hover:bg-white/5 transition-all text-left">
+                  <Moon className="w-5 h-5" />
+                  <span>Cambiar aspecto</span>
+                </button>
+                <div className="border-t border-white/10">
+                  <button 
+                    onClick={handleLogout}
+                    className="flex items-center gap-4 w-full px-4 py-3 hover:bg-white/5 transition-all text-left text-red-400"
+                  >
+                    <LogOut className="w-5 h-5" />
+                    <span>Cerrar sesión</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </aside>
+
+      {/* Spacer for desktop */}
+      <div className="hidden md:block w-64"></div>
+
+      {/* Mobile Bottom Bar */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-black border-t border-gray-800 z-50">
+        <div className="flex justify-around items-center h-16">
+          <NavLink to="/home" className={({ isActive }) => `flex flex-col items-center p-2 ${isActive ? 'text-white' : 'text-gray-400'}`}>
+            <Home className="w-6 h-6" />
+          </NavLink>
+          <NavLink to="/search" className={({ isActive }) => `flex flex-col items-center p-2 ${isActive ? 'text-white' : 'text-gray-400'}`}>
+            <Search className="w-6 h-6" />
+          </NavLink>
+          <NavLink to="/create" className={({ isActive }) => `flex flex-col items-center p-2 ${isActive ? 'text-white' : 'text-gray-400'}`}>
+            <PlusSquare className="w-6 h-6" />
+          </NavLink>
+          <NavLink to="/messages" className={({ isActive }) => `flex flex-col items-center p-2 ${isActive ? 'text-white' : 'text-gray-400'}`}>
+            <MessageCircle className="w-6 h-6" />
+          </NavLink>
+          <NavLink to="/profile" className={({ isActive }) => `flex flex-col items-center p-2 ${isActive ? 'text-white' : 'text-gray-400'}`}>
+            {({ isActive }) => (
+              userProfile?.photoURL ? (
+                <img 
+                  src={userProfile.photoURL} 
+                  alt="Profile" 
+                  className={`w-7 h-7 rounded-full object-cover ${isActive ? 'ring-2 ring-white' : ''}`}
+                />
+              ) : (
+                <User className="w-6 h-6" />
+              )
+            )}
+          </NavLink>
+        </div>
+      </nav>
+
+      {/* Mobile Bottom Padding */}
+      <div className="md:hidden h-16"></div>
+    </>
   );
 }
 

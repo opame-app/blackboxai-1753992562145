@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import JobOfferForm from './JobOfferForm';
-import ActivityFeed from '../Common/ActivityFeed';
-import { createRestaurant } from '../../services/restaurantService';
+import JobOfferForm from './JobOfferForm.js';
+import ActivityFeed from '../Common/ActivityFeed.js';
+import { createRestaurant } from '../../services/restaurantService.js';
 
 function AdminDashboard({ user }) {
   const [showJobDialog, setShowJobDialog] = useState(false);
