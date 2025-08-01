@@ -1,14 +1,19 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 
-function PrivateRoute({ user, userProfile, children }) {
+const PrivateRoute = ({ user, userProfile, children }) => {
   if (!user) {
+    // Redirect to signin page if not logged in
     return <Navigate to="/signin" />;
   }
+
   if (!userProfile || !userProfile.profileComplete) {
-    return <Navigate to="/signup" />;
+    // Redirect to signup if profile is not complete
+    return <Navigate to="/signin" />;
   }
-  return children;
-}
+
+  // Pass user and userProfile props to the child component
+  return React.cloneElement(children, { user, userProfile });
+};
 
 export default PrivateRoute;

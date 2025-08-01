@@ -13,7 +13,8 @@ import SupplierProfile from './components/Dashboard/SupplierProfile.js';
 import EmployeeDashboard from './components/Dashboard/EmployeeDashboard.js';
 import InfluencerDashboard from './components/Dashboard/InfluencerDashboard.js';
 import AdminDashboard from './components/Dashboard/AdminDashboard.js';
-import Profile from './components/Dashboard/Profile.js';
+import MyProfile from './components/Profile/MyProfile.js';
+import UserProfile from './components/Profile/UserProfile.js';
 import SeedData from './components/Admin/SeedData.js';
 import AutoSeed from './components/AutoSeed.js';
 import AutoSeedOffers from './components/AutoSeedOffers.js';
@@ -24,6 +25,9 @@ import PrivateRoute from './components/Common/PrivateRoute.js';
 import Home from './components/Home.js';
 import OffersFeed from './components/Dashboard/OffersFeed.js';
 import Messages from './components/Messages/Messages.js';
+import Conversation from './components/Messages/Conversation.js';
+import Search from './components/Search/Search.js';
+import JobFeed from './components/Jobs/JobFeed.js';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -60,7 +64,7 @@ function App() {
 
   const renderDashboard = () => {
     if (!userProfile?.role) {
-      return <Navigate to="/signup" />;
+      return <Navigate to="/signin" />;
     }
 
     if (userProfile.isAdmin && userProfile.role === 'empleado') {
@@ -85,7 +89,7 @@ function App() {
         // Could redirect to a restaurant dashboard or list
         return <Navigate to="/restaurant-list" />;
       default:
-        return <Navigate to="/signup" />;
+        return <Navigate to="/signin" />;
     }
   };
 
@@ -154,7 +158,7 @@ function App() {
       <div className="min-h-screen flex flex-col bg-white">
         {/* <Header user={user} userProfile={userProfile} /> */}
         <div className="flex min-h-screen">
-          <Sidebar userProfile={userProfile} />
+          {user && userProfile?.profileComplete && <Sidebar userProfile={userProfile} />}
           <main className="flex-1 bg-white">
             <Routes>
               <Route 
@@ -162,19 +166,19 @@ function App() {
                 element={
                   user ? (
                     userProfile?.profileComplete ? (
-                      <Navigate to="/dashboard" />
+                      <Navigate to="/home" />
                     ) : (
-                      <Navigate to="/signup" />
+                      <Navigate to="/signin" />
                     )
                   ) : (
-                    <Navigate to="/signin" />
+                    <SignIn />
                   )
                 } 
               />
               <Route 
                 path="/signin" 
                 element={
-                  user ? <Navigate to="/dashboard" /> : <SignIn />
+                  !user ? <Navigate to="/home" /> : <SignIn />
                 } 
               />
               <Route 
@@ -201,7 +205,12 @@ function App() {
               />
               <Route path="/profile" element={
                 <PrivateRoute user={user} userProfile={userProfile}>
-                  <Profile user={user} userProfile={userProfile} />
+                  <MyProfile user={user} userProfile={userProfile} />
+                </PrivateRoute>
+              } />
+              <Route path="/profile/:userId" element={
+                <PrivateRoute user={user} userProfile={userProfile}>
+                  <UserProfile />
                 </PrivateRoute>
               } />
               <Route path="/home" element={
@@ -212,6 +221,21 @@ function App() {
               <Route path="/messages" element={
                 <PrivateRoute user={user} userProfile={userProfile}>
                   <Messages user={user} userProfile={userProfile} />
+                </PrivateRoute>
+              } />
+              <Route path="/messages/:conversationId" element={
+                <PrivateRoute user={user} userProfile={userProfile}>
+                  <Conversation user={user} userProfile={userProfile} />
+                </PrivateRoute>
+              } />
+              <Route path="/search" element={
+                <PrivateRoute user={user} userProfile={userProfile}>
+                  <Search />
+                </PrivateRoute>
+              } />
+              <Route path="/jobs" element={
+                <PrivateRoute user={user} userProfile={userProfile}>
+                  <JobFeed />
                 </PrivateRoute>
               } />
               <Route path="/offers-feed" element={

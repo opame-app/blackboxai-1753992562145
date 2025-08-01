@@ -17,7 +17,7 @@ function Header({ user, userProfile }) {
   return (
     <header className="header">
       <div className="header-content container">
-        <Link to="/" className="logo">GastroCommunity</Link>
+        <Link to="/" className="logo">Cactus</Link>
         <nav className="nav-links">
           {user ? (
             <>

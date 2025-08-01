@@ -30,10 +30,10 @@ function Home() {
     <div className="max-w-4xl mx-auto p-4">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-800 mb-2">
-          Comunidad Gastronómica
+          Bienvenido a Cactus
         </h1>
         <p className="text-gray-600 text-sm">
-          Comparte experiencias, fotos y conecta con otros profesionales del sector gastronómico
+          Comparte experiencias, fotos y conecta con otros profesionales del sector.
         </p>
       </div>
 

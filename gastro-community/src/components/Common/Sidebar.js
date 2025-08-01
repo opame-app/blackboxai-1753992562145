@@ -44,7 +44,7 @@ function Sidebar({ userProfile }) {
     { to: '/search', label: 'Buscar', icon: Search },
     { to: '/explore', label: 'Explorar', icon: Compass },
     { to: '/messages', label: 'Mensajes', icon: MessageCircle },
-    { to: '/notifications', label: 'Notificaciones', icon: Heart },
+    { to: '/notifications', label: 'Notificaciones', icon: Heart },    
     { to: '/create', label: 'Crear', icon: PlusSquare },
     { to: '/profile', label: 'Perfil', icon: User },
   ];
@@ -52,12 +52,14 @@ function Sidebar({ userProfile }) {
   const roleLinks = [];
   
   if (userProfile.role === 'dueño de restaurant') {
+    roleLinks.push({ to: '/dashboard', label: 'Panel', icon: Users });
     roleLinks.push({ to: '/empleados', label: 'Empleados', icon: Users });
     roleLinks.push({ to: '/proveedores', label: 'Proveedores', icon: Package });
   }
 
   if (userProfile.role === 'empleado') {
-    roleLinks.push({ to: '/offers-feed', label: 'Ofertas', icon: Briefcase });
+    roleLinks.push({ to: '/jobs', label: 'Ofertas', icon: Briefcase });
+    // roleLinks.push({ to: '/offers-feed', label: 'Ofertas', icon: Package });
   }
 
   if (userProfile.isAdmin) {
@@ -71,7 +73,7 @@ function Sidebar({ userProfile }) {
         {/* Logo */}
         <div className="p-6 pb-8">
           <div className="flex items-center">
-            <h1 className="text-2xl font-bold tracking-tight">Gastro</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Cactus</h1>
           </div>
         </div>
 
