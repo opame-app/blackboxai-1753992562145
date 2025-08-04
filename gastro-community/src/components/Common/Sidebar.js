@@ -7,6 +7,7 @@ import {
   Search, 
   Compass, 
   MessageCircle, 
+  Bell,
   Heart, 
   PlusSquare, 
   User,
@@ -20,7 +21,8 @@ import {
   ShieldCheck,
   Menu, // Keep Menu for the "More" button
   ChevronDown,
-  Store
+  Store,
+  Activity
 } from 'lucide-react';
 
 function Sidebar({ userProfile }) {
@@ -46,8 +48,9 @@ function Sidebar({ userProfile }) {
     { to: '/search', label: 'Buscar', icon: Search },
     // { to: '/restaurants', label: 'Restaurantes', icon: Store },
     { to: '/explore', label: 'Explorar', icon: Compass },
+    // { to: '/actividad2', label: 'Actividad 2', icon: Activity },
     { to: '/messages', label: 'Mensajes', icon: MessageCircle },
-    { to: '/notifications', label: 'Notificaciones', icon: Heart },    
+    { to: '/notifications', label: 'Notificaciones', icon: Bell },
     // { to: '/create', label: 'Crear', icon: PlusSquare },
     { to: '/profile', label: 'Perfil', icon: User },
   ];
@@ -72,11 +75,11 @@ function Sidebar({ userProfile }) {
   return (
     <>
       {/* Desktop Sidebar (Always Expanded) */}
-      <aside className={`hidden md:flex flex-col fixed left-0 top-0 h-full bg-black text-white border-r border-gray-800 z-50 transition-all duration-300 ${isCollapsed ? 'w-20' : 'w-60'}`}>
+      <aside className={`hidden md:flex flex-col fixed left-0 top-0 h-full bg-black text-white border-r border-gray-800 z-50 transition-all duration-300 ${isCollapsed ? 'w-20' : 'w-55'}`}>
         {/* Logo */}
         <div className="p-6 pb-8">
           <div className={`flex items-center ${isCollapsed ? 'justify-center' : ''}`}>
-            <h1 className="text-2xl font-bold tracking-tight">
+            <h1 className="text-3xl font-bold tracking-tight">
               {isCollapsed ? 'c' : 'cactus'}
             </h1>
           </div>
@@ -173,13 +176,13 @@ function Sidebar({ userProfile }) {
               </div>
             )}
           </div>
-          <button
+          {/* <button
             onClick={() => setIsCollapsed(!isCollapsed)}
             className={`flex items-center w-full px-3 py-3 rounded-lg hover:bg-white/5 transition-all mt-2 ${isCollapsed ? 'justify-center' : 'gap-4'}`}
           >
             <Menu className={`w-6 h-6 transition-transform ${isCollapsed ? 'rotate-180' : ''}`} />
             <span className={isCollapsed ? 'hidden' : ''}>Colapsar</span>
-          </button>
+          </button> */}
         </div>
       </aside>
 
@@ -195,8 +198,11 @@ function Sidebar({ userProfile }) {
           <NavLink to="/search" className={({ isActive }) => `flex flex-col items-center p-2 ${isActive ? 'text-white' : 'text-gray-400'}`}>
             <Search className="w-6 h-6" />
           </NavLink>
-          <NavLink to="/create" className={({ isActive }) => `flex flex-col items-center p-2 ${isActive ? 'text-white' : 'text-gray-400'}`}>
+          <NavLink to="/explore" className={({ isActive }) => `flex flex-col items-center p-2 ${isActive ? 'text-white' : 'text-gray-400'}`}>
             <PlusSquare className="w-6 h-6" />
+          </NavLink>
+          <NavLink to="/notifications" className={({ isActive }) => `flex flex-col items-center p-2 ${isActive ? 'text-white' : 'text-gray-400'}`}>
+            <Bell className="w-6 h-6" />
           </NavLink>
           <NavLink to="/messages" className={({ isActive }) => `flex flex-col items-center p-2 ${isActive ? 'text-white' : 'text-gray-400'}`}>
             <MessageCircle className="w-6 h-6" />

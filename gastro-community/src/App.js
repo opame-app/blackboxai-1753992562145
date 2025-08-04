@@ -31,6 +31,7 @@ import Messages from './components/Messages/Messages.js';
 import Conversation from './components/Messages/Conversation.js';
 import Search from './components/Search/Search.js';
 import JobFeed from './components/Jobs/JobFeed.js';
+import Notifications from './components/Notifications/Notifications.js';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -254,6 +255,11 @@ function App() {
               <Route path="/offers-feed" element={
                 <PrivateRoute user={user} userProfile={userProfile}>
                   <OffersFeed user={user} userProfile={userProfile} />
+                </PrivateRoute>
+              } />
+              <Route path="/notifications" element={
+                <PrivateRoute user={user} userProfile={userProfile}>
+                  <Notifications user={user} />
                 </PrivateRoute>
               } />
               <Route path="/explore" element={

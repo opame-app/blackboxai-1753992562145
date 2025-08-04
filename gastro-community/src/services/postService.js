@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../firebase.js';
+import { createNotification } from './notificationService.js';
 
 export const uploadImage = async (file, userId) => {
   try {
@@ -103,6 +104,12 @@ export const likePost = async (postId, userId) => {
         likes: arrayUnion(userId),
         likesCount: increment(1)
       });
+
+      // Crear notificación si el like no es del propio usuario
+      if (postData.userId !== userId) {
+        await createNotification(postData.userId, 'like', postId, userId);
+      }
+
       return true; // Indica que se agregó el like
     }
   } catch (error) {
@@ -178,6 +185,62 @@ export const deleteComment = async (postId, commentId) => {
     return true;
   } catch (error) {
     console.error('Error deleting comment:', error);
+    throw error;
+  }
+};
+
+// Función para guardar/desguardar un post
+export const savePost = async (postId, userId) => {
+  try {
+    const postRef = doc(db, 'posts', postId);
+    const postDoc = await getDoc(postRef);
+    
+    if (!postDoc.exists()) {
+      throw new Error('Post not found');
+    }
+    
+    const postData = postDoc.data();
+    const savedBy = postData.savedBy || [];
+    
+    if (savedBy.includes(userId)) {
+      // Si ya está guardado, quitarlo
+      await updateDoc(postRef, {
+        savedBy: arrayRemove(userId)
+      });
+      return false; // Indica que se quitó de guardados
+    } else {
+      // Si no está guardado, agregarlo
+      await updateDoc(postRef, {
+        savedBy: arrayUnion(userId)
+      });
+      return true; // Indica que se agregó a guardados
+    }
+  } catch (error) {
+    console.error('Error toggling save post:', error);
+    throw error;
+  }
+};
+
+// Función para obtener posts guardados por un usuario
+export const getSavedPosts = async (userId) => {
+  try {
+    const q = query(
+      collection(db, 'posts'),
+      orderBy('createdAt', 'desc')
+    );
+    const querySnapshot = await getDocs(q);
+    
+    // Filtrar posts que el usuario ha guardado
+    const savedPosts = querySnapshot.docs
+      .map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }))
+      .filter(post => post.savedBy && post.savedBy.includes(userId));
+    
+    return savedPosts;
+  } catch (error) {
+    console.error('Error fetching saved posts:', error);
     throw error;
   }
 };

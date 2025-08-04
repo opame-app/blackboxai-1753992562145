@@ -5,6 +5,7 @@ import { getPosts } from '../../services/postService.js';
 import { followUser, unfollowUser, checkIfFollowing, getFollowCounts } from '../../services/followService.js';
 import { createOrGetConversation, canUsersMessage } from '../../services/messageService.js';
 import { Camera, Grid3X3, Bookmark, UserCheck, Heart, MessageCircle, MessageSquare } from 'lucide-react';
+import PostDetail from '../Posts/PostDetail.js';
 
 const UserProfile = ({ user, userProfile }) => {
   const { userId } = useParams();
@@ -18,6 +19,7 @@ const UserProfile = ({ user, userProfile }) => {
   const [followingCount, setFollowingCount] = useState(0);
   const [actionLoading, setActionLoading] = useState(false);
   const [messageLoading, setMessageLoading] = useState(false);
+  const [selectedPostId, setSelectedPostId] = useState(null);
 
   useEffect(() => {
     const fetchProfileData = async () => {
@@ -166,73 +168,77 @@ const UserProfile = ({ user, userProfile }) => {
   const canMessage = canUsersMessage(userProfile, profile, userId, user.uid);
 
   return (
-    <div className="max-w-4xl mx-auto">
-      {/* Profile Header */}
-      <div className="bg-white border-b p-8">
-        <div className="flex items-center gap-8">
-          <img 
-            src={profile.photoURL || `https://i.pravatar.cc/150?u=${profile.uid}`} 
-            alt={profile.displayName || profile.username}
-            className="w-40 h-40 rounded-full object-cover"
-          />
-          <div className="flex-1">
-            <div className="flex items-center gap-4 mb-4">
-              <h1 className="text-2xl font-light">{profile.displayName || profile.username}</h1>
-              {followStatus !== 'own_profile' && (
-                <>
-                  <button 
-                    onClick={handleFollowAction}
-                    disabled={actionLoading}
-                    className={getFollowButtonStyle()}
-                  >
-                    {actionLoading ? 'Cargando...' : getFollowButtonText()}
-                  </button>
-                  {canMessage && (
+    <div className="max-w-4xl mx-auto w-full overflow-x-hidden">
+      <div className="sticky top-0 z-10 bg-white">
+        {/* Profile Header */}
+        <div className="border-b p-4 sm:p-8">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-8">
+            <img 
+              src={profile.photoURL || `https://i.pravatar.cc/150?u=${profile.uid}`} 
+              alt={profile.displayName || profile.username}
+              className="w-32 h-32 sm:w-40 sm:h-40 rounded-full object-cover"
+            />
+            <div className="flex-1 text-center sm:text-left w-full min-w-0">
+              <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 mb-4">
+                <h1 className="text-2xl font-light">{profile.displayName || profile.username}</h1>
+                {followStatus !== 'own_profile' && (
+                  <>
                     <button 
-                      onClick={handleMessageClick}
-                      disabled={messageLoading}
-                      className="px-4 py-1.5 bg-gray-200 rounded-lg font-semibold text-sm hover:bg-gray-300 flex items-center gap-2 disabled:opacity-50"
+                      onClick={handleFollowAction}
+                      disabled={actionLoading}
+                      className={getFollowButtonStyle()}
                     >
-                      <MessageSquare className="w-4 h-4" />
-                      {messageLoading ? 'Cargando...' : 'Mensaje'}
+                      {actionLoading ? 'Cargando...' : getFollowButtonText()}
                     </button>
-                  )}
-                </>
-              )}
-            </div>
-            <div className="flex gap-8 mb-4">
-              <div><span className="font-semibold">{posts.length}</span> publicaciones</div>
-              <Link to={`/profile/${userId}/followers`} className="hover:underline">
-                <span className="font-semibold">{followersCount}</span> seguidores
-              </Link>
-              <Link to={`/profile/${userId}/following`} className="hover:underline">
-                <span className="font-semibold">{followingCount}</span> seguidos
-              </Link>
-            </div>
-            <div>
-              <p className="font-semibold">{profile.displayName || profile.username}</p>
-              {profile.bio && <p className="text-gray-600">{profile.bio}</p>}
-              {isPrivate && (
-                <p className="text-sm text-gray-500 mt-2">🔒 Cuenta privada</p>
-              )}
+                    {canMessage && (
+                      <button 
+                        onClick={handleMessageClick}
+                        disabled={messageLoading}
+                        className="px-4 py-1.5 bg-gray-200 rounded-lg font-semibold text-sm hover:bg-gray-300 flex items-center gap-2 disabled:opacity-50"
+                      >
+                        <MessageSquare className="w-4 h-4" />
+                        {messageLoading ? 'Cargando...' : 'Mensaje'}
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+              <div className="flex justify-center sm:justify-start gap-4 sm:gap-8 mb-4 flex-wrap">
+                <div><span className="font-semibold">{posts.length}</span> publicaciones</div>
+                <Link to={`/profile/${userId}/followers`} className="hover:underline">
+                  <span className="font-semibold">{followersCount}</span> seguidores
+                </Link>
+                <Link to={`/profile/${userId}/following`} className="hover:underline">
+                  <span className="font-semibold">{followingCount}</span> seguidos
+                </Link>
+              </div>
+              <div>
+                <p className="font-semibold">{profile.displayName || profile.username}</p>
+                {profile.bio && <p className="text-gray-600">{profile.bio}</p>}
+                {isPrivate && (
+                  <p className="text-sm text-gray-500 mt-2">🔒 Cuenta privada</p>
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Tabs */}
-      <div className="border-t flex justify-center">
-        <div className="flex items-center gap-2 p-4 border-t-2 border-black">
-          <Grid3X3 className="w-4 h-4" />
-          <span className="text-sm font-semibold">PUBLICACIONES</span>
-        </div>
-        <div className="flex items-center gap-2 p-4">
-          <Bookmark className="w-4 h-4 text-gray-400" />
-          <span className="text-sm text-gray-400">GUARDADAS</span>
-        </div>
-        <div className="flex items-center gap-2 p-4">
-          <UserCheck className="w-4 h-4 text-gray-400" />
-          <span className="text-sm text-gray-400">ETIQUETADAS</span>
+        {/* Tabs */}
+        <div className="border-b overflow-x-auto">
+          <div className="flex justify-center min-w-max">
+            <div className="flex items-center gap-2 px-4 sm:px-8 py-4 border-t-2 border-black whitespace-nowrap">
+              <Grid3X3 className="w-4 h-4" />
+              <span className="text-sm font-semibold">PUBLICACIONES</span>
+            </div>
+            <div className="flex items-center gap-2 px-4 sm:px-8 py-4 whitespace-nowrap">
+              <Bookmark className="w-4 h-4 text-gray-400" />
+              <span className="text-sm text-gray-400">GUARDADAS</span>
+            </div>
+            <div className="flex items-center gap-2 px-4 sm:px-8 py-4 whitespace-nowrap">
+              <UserCheck className="w-4 h-4 text-gray-400" />
+              <span className="text-sm text-gray-400">ETIQUETADAS</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -246,9 +252,13 @@ const UserProfile = ({ user, userProfile }) => {
           <p className="text-gray-500">Sigue a @{profile.username || profile.displayName} para ver sus fotos y videos.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-3 gap-1 sm:gap-4 p-4">
+        <div className="grid grid-cols-3 gap-1 sm:gap-4 p-4 w-full overflow-x-hidden">
           {posts.length > 0 ? posts.map((post) => (
-            <div key={post.id} className="aspect-square bg-gray-100 group relative">
+            <div 
+              key={post.id} 
+              className="aspect-square bg-gray-100 group relative cursor-pointer"
+              onClick={() => setSelectedPostId(post.id)}
+            >
               <img src={post.imageUrl || post.imageUrls?.[0] || 'https://placehold.co/600x400'} alt="Post" className="w-full h-full object-cover"/>
               <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                 <div className="flex gap-4 text-white">
@@ -264,6 +274,14 @@ const UserProfile = ({ user, userProfile }) => {
             </div>
           )}
         </div>
+      )}
+      
+      {/* Post Detail Modal */}
+      {selectedPostId && (
+        <PostDetail 
+          postId={selectedPostId} 
+          onClose={() => setSelectedPostId(null)} 
+        />
       )}
     </div>
   );

@@ -528,33 +528,21 @@ service cloud.firestore {
 
     // New rules for users, followers, and following
     match /users/{userId} {
-      // Allow authenticated users to read any user profile
-      allow read: if request.auth != null;
-      // Only allow users to write to their own profile
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow read: if true;
+      allow write: if request.auth.uid == userId;
 
       // Rules for the 'following' subcollection
       match /following/{targetUserId} {
-        // Allow the user to read their own following list
-        allow read: if request.auth != null && request.auth.uid == userId;
-        // Allow the user to follow/unfollow others
-        allow create, delete: if request.auth != null && request.auth.uid == userId;
+        allow read: if request.auth.uid == userId;
+        allow create, delete: if request.auth.uid == userId;
       }
 
       // Rules for the 'followers' subcollection
       match /followers/{followerId} {
-        // Allow anyone to read followers list (for public profiles)
-        allow read: if request.auth != null;
-        // Allow users to add/remove themselves from followers
-
-     // Reglas para publicaciones (posts)
-=======
-        allow create, delete: if request.auth != null && request.auth.uid == followerId;
+        allow read: if true;
+        allow create, delete: if request.auth.uid == followerId;
       }
     }
-
-     // Reglas para publicaciones (posts)
-=======
 
      // Reglas para publicaciones (posts)
     match /posts/{postId} {
@@ -628,6 +616,23 @@ service cloud.firestore {
       // Solo el propietario puede eliminar su restaurante
       allow delete: if request.auth != null && 
                      ('ownerId' in resource.data && request.auth.uid == resource.data.ownerId);
+    }
+    // Reglas para notificaciones
+    match /notifications/{notificationId} {
+      // Solo usuarios autenticados pueden leer sus propias notificaciones
+      allow read: if request.auth != null &&
+                  resource.data.userId == request.auth.uid;
+
+      // Solo usuarios autenticados pueden crear notificaciones para sí mismos
+      allow create: if request.auth != null &&
+                    request.resource.data.userId == request.auth.uid;
+
+      // No se permite actualizar notificaciones (generalmente son inmutables)
+      allow update: if false;
+
+      // Solo el dueño puede eliminar su notificación
+      allow delete: if request.auth != null &&
+                    resource.data.userId == request.auth.uid;
     }
 	}
 }

@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { updateUserProfile } from '../../services/userService.js';
 import { updateProfile } from 'firebase/auth';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../firebase.js';
-import { getPosts } from '../../services/postService.js';
+import { getPosts, getSavedPosts } from '../../services/postService.js';
 import { getFollowCounts } from '../../services/followService.js';
+import { createOrGetConversation, canUsersMessage } from '../../services/messageService.js';
 import { 
   Settings, 
   Grid3X3, 
@@ -22,17 +23,22 @@ import {
   Users,
   Star,
   Heart,
-  MessageCircle
+  MessageCircle,
+  MessageSquare
 } from 'lucide-react';
+import PostDetail from '../Posts/PostDetail.js';
 
 function MyProfile({ user, userProfile }) {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('posts');
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [userPosts, setUserPosts] = useState([]);
+  const [savedPosts, setSavedPosts] = useState([]);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [followersCount, setFollowersCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
+  const [selectedPostId, setSelectedPostId] = useState(null);
   const fileInputRef = useRef(null);
   
   const [formData, setFormData] = useState({
@@ -77,9 +83,20 @@ function MyProfile({ user, userProfile }) {
     }
   }, [user?.uid]);
 
+  const fetchSavedPosts = useCallback(async () => {
+    if (!user?.uid) return;
+    try {
+      const saved = await getSavedPosts(user.uid);
+      setSavedPosts(saved);
+    } catch (error) {
+      console.error('Error fetching saved posts:', error);
+    }
+  }, [user?.uid]);
+
   useEffect(() => {
     fetchUserPosts();
-  }, [fetchUserPosts]);
+    fetchSavedPosts();
+  }, [fetchUserPosts, fetchSavedPosts]);
 
   // Fetch follow counts
   useEffect(() => {
@@ -173,12 +190,17 @@ function MyProfile({ user, userProfile }) {
     return roleLabels[userProfile?.role] || userProfile?.role;
   };
 
+  const handleMessageClick = () => {
+    // En MyProfile, simplemente navegar a la página de mensajes
+    navigate('/messages');
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto">
-        <div className="bg-white border-b">
-          <div className="px-4 py-8 sm:px-6 lg:px-8">
-            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-8">
+    <div className="space-y-1 sm:space-y-2">
+      <div className="max-w-4xl mx-auto w-full">
+        <div className="sticky top-0 z-10 bg-white">
+          <div className="px-4 py-8 sm:px-6 lg:px-8 border-b">
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-8">
               <div className="relative group">
                 <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full overflow-hidden bg-gray-200">
                   <img src={user?.photoURL || 'https://i.pravatar.cc/150'} alt={formData.displayName} className="w-full h-full object-cover"/>
@@ -193,7 +215,16 @@ function MyProfile({ user, userProfile }) {
                 <div className="flex items-center justify-center sm:justify-start gap-4 mb-4">
                   <h1 className="text-2xl font-semibold text-gray-900">{userProfile?.displayName || user?.displayName || 'Usuario'}</h1>
                   {!isEditing && (
-                    <button onClick={() => setIsEditing(true)} className="px-4 py-1.5 text-sm font-medium bg-gray-100 rounded-lg hover:bg-gray-200">Editar perfil</button>
+                    <>
+                      <button onClick={() => setIsEditing(true)} className="px-4 py-1.5 text-sm font-medium bg-gray-100 rounded-lg hover:bg-gray-200">Editar perfil</button>
+                      <button 
+                        onClick={handleMessageClick}
+                        className="px-4 py-1.5 text-sm font-medium bg-gray-100 rounded-lg hover:bg-gray-200 flex items-center gap-2"
+                      >
+                        <MessageSquare className="w-4 h-4" />
+                        Mensajes
+                      </button>
+                    </>
                   )}
                   <button className="p-2 hover:bg-gray-100 rounded-lg"><Settings className="w-5 h-5" /></button>
                 </div>
@@ -209,16 +240,16 @@ function MyProfile({ user, userProfile }) {
                 </div>
 
                 {isEditing ? (
-                  <form onSubmit={handleSave} className="space-y-4 max-w-lg">
-                    <input name="displayName" value={formData.displayName} onChange={handleFormChange} placeholder="Nombre" className="w-full p-2 border rounded"/>
-                    <textarea name="bio" value={formData.bio} onChange={handleFormChange} placeholder="Biografía" rows={3} className="w-full p-2 border rounded"/>
-                    <input name="location" value={formData.location} onChange={handleFormChange} placeholder="Ubicación" className="w-full p-2 border rounded"/>
-                    <input name="website" value={formData.website} onChange={handleFormChange} placeholder="Sitio web" className="w-full p-2 border rounded"/>
-                    <input name="phone" value={formData.phone} onChange={handleFormChange} placeholder="Teléfono" className="w-full p-2 border rounded"/>
+                  <form onSubmit={handleSave} className="space-y-4 max-w-lg w-full">
+                    <input name="displayName" value={formData.displayName} onChange={handleFormChange} placeholder="Nombre" className="w-full p-2 border rounded min-w-0"/>
+                    <textarea name="bio" value={formData.bio} onChange={handleFormChange} placeholder="Biografía" rows={3} className="w-full p-2 border rounded min-w-0"/>
+                    <input name="location" value={formData.location} onChange={handleFormChange} placeholder="Ubicación" className="w-full p-2 border rounded min-w-0"/>
+                    <input name="website" value={formData.website} onChange={handleFormChange} placeholder="Sitio web" className="w-full p-2 border rounded min-w-0"/>
+                    <input name="phone" value={formData.phone} onChange={handleFormChange} placeholder="Teléfono" className="w-full p-2 border rounded min-w-0"/>
                     
                     <div>
                       <label className="block text-sm font-medium text-gray-700">Rol</label>
-                      <select name="role" value={formData.role} onChange={handleFormChange} className="w-full p-2 border rounded mt-1">
+                      <select name="role" value={formData.role} onChange={handleFormChange} className="w-full p-2 border rounded mt-1 min-w-0">
                         <option value="empleado">Empleado</option>
                         <option value="dueño de restaurant">Dueño de Restaurant</option>
                         <option value="proveedor">Proveedor</option>
@@ -228,8 +259,8 @@ function MyProfile({ user, userProfile }) {
 
                     {formData.role === 'empleado' && (
                       <>
-                        <input name="profession" value={formData.profession} onChange={handleFormChange} placeholder="Profesión" className="w-full p-2 border rounded"/>
-                        <input name="experience" value={formData.experience} onChange={handleFormChange} placeholder="Años de experiencia" className="w-full p-2 border rounded"/>
+                        <input name="profession" value={formData.profession} onChange={handleFormChange} placeholder="Profesión" className="w-full p-2 border rounded min-w-0"/>
+                        <input name="experience" value={formData.experience} onChange={handleFormChange} placeholder="Años de experiencia" className="w-full p-2 border rounded min-w-0"/>
                       </>
                     )}
 
@@ -251,7 +282,7 @@ function MyProfile({ user, userProfile }) {
                       </label>
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <button type="submit" disabled={loading} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
                         {loading ? 'Guardando...' : 'Guardar Cambios'}
                       </button>
@@ -277,32 +308,36 @@ function MyProfile({ user, userProfile }) {
               </div>
             </div>
           </div>
-        </div>
-
-        <div className="bg-white border-b sticky top-0 z-10">
-          <div className="flex justify-center">
-            <button onClick={() => setActiveTab('posts')} className={`flex items-center gap-2 px-8 py-4 text-sm font-medium border-t-2 ${activeTab === 'posts' ? 'border-black text-black' : 'border-transparent text-gray-500'}`}>
-              <Grid3X3 className="w-4 h-4" /> PUBLICACIONES
-            </button>
-            <button onClick={() => setActiveTab('saved')} className={`flex items-center gap-2 px-8 py-4 text-sm font-medium border-t-2 ${activeTab === 'saved' ? 'border-black text-black' : 'border-transparent text-gray-500'}`}>
-              <Bookmark className="w-4 h-4" /> GUARDADAS
-            </button>
-            <button onClick={() => setActiveTab('tagged')} className={`flex items-center gap-2 px-8 py-4 text-sm font-medium border-t-2 ${activeTab === 'tagged' ? 'border-black text-black' : 'border-transparent text-gray-500'}`}>
-              <UserCheck className="w-4 h-4" /> ETIQUETADAS
-            </button>
+          
+          <div className="border-b overflow-x-auto">
+            <div className="flex justify-center min-w-max">
+              <button onClick={() => setActiveTab('posts')} className={`flex items-center gap-2 px-8 py-4 text-sm font-medium border-t-2 ${activeTab === 'posts' ? 'border-black text-black' : 'border-transparent text-gray-500'}`}>
+                <Grid3X3 className="w-4 h-4" /> PUBLICACIONES
+              </button>
+              <button onClick={() => setActiveTab('saved')} className={`flex items-center gap-2 px-8 py-4 text-sm font-medium border-t-2 ${activeTab === 'saved' ? 'border-black text-black' : 'border-transparent text-gray-500'}`}>
+                <Bookmark className="w-4 h-4" /> GUARDADAS
+              </button>
+              <button onClick={() => setActiveTab('tagged')} className={`flex items-center gap-2 px-8 py-4 text-sm font-medium border-t-2 ${activeTab === 'tagged' ? 'border-black text-black' : 'border-transparent text-gray-500'}`}>
+                <UserCheck className="w-4 h-4" /> ETIQUETADAS
+              </button>
+            </div>
           </div>
         </div>
 
-        <div className="bg-white min-h-[400px]">
+        <div className="bg-white min-h-[400px] overflow-x-hidden">
           {activeTab === 'posts' && (
             <div className="p-4">
               {userPosts.length === 0 ? (
                 <div className="text-center py-12"><Camera className="w-12 h-12 text-gray-300 mx-auto mb-4" /><p>Aún no hay publicaciones</p></div>
               ) : (
-                <div className="grid grid-cols-3 gap-1 sm:gap-4">
+                <div className="grid grid-cols-3 gap-1 sm:gap-4 w-full">
                   {userPosts.map((post) => (
-                    <div key={post.id} className="aspect-square bg-gray-100 group relative">
-                      <img src={post.imageUrl || 'https://placehold.co/600x400'} alt="Post" className="w-full h-full object-cover"/>
+                    <div 
+                      key={post.id} 
+                      className="aspect-square bg-gray-100 group relative cursor-pointer"
+                      onClick={() => setSelectedPostId(post.id)}
+                    >
+                      <img src={post.imageUrl || post.imageUrls?.[0] || 'https://placehold.co/600x400'} alt="Post" className="w-full h-full object-cover"/>
                       <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                         <div className="flex gap-4 text-white">
                           <div className="flex items-center gap-1"><Heart className="w-5 h-5 fill-white" /><span>{post.likesCount || 0}</span></div>
@@ -315,8 +350,56 @@ function MyProfile({ user, userProfile }) {
               )}
             </div>
           )}
+          
+          {activeTab === 'saved' && (
+            <div className="p-4">
+              {savedPosts.length === 0 ? (
+                <div className="text-center py-12">
+                  <Bookmark className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                  <p className="font-semibold">Guarda publicaciones</p>
+                  <p className="text-gray-500 text-sm mt-2">Guarda las publicaciones que quieras ver más tarde.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-1 sm:gap-4 w-full">
+                  {savedPosts.map((post) => (
+                    <div 
+                      key={post.id} 
+                      className="aspect-square bg-gray-100 group relative cursor-pointer"
+                      onClick={() => setSelectedPostId(post.id)}
+                    >
+                      <img src={post.imageUrl || post.imageUrls?.[0] || 'https://placehold.co/600x400'} alt="Post" className="w-full h-full object-cover"/>
+                      <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex gap-4 text-white">
+                          <div className="flex items-center gap-1"><Heart className="w-5 h-5 fill-white" /><span>{post.likesCount || 0}</span></div>
+                          <div className="flex items-center gap-1"><MessageCircle className="w-5 h-5 fill-white" /><span>{post.commentsCount || 0}</span></div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          
+          {activeTab === 'tagged' && (
+            <div className="p-4">
+              <div className="text-center py-12">
+                <UserCheck className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                <p className="font-semibold">Fotos en las que apareces</p>
+                <p className="text-gray-500 text-sm mt-2">Cuando alguien te etiquete en una foto, aparecerá aquí.</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
+      
+      {/* Post Detail Modal */}
+      {selectedPostId && (
+        <PostDetail 
+          postId={selectedPostId} 
+          onClose={() => setSelectedPostId(null)} 
+        />
+      )}
     </div>
   );
 }

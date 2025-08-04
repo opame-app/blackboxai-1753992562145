@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { getPosts, likePost, addComment } from '../../services/postService.js';
+import { useNavigate } from 'react-router-dom';
+import { getPosts, likePost, addComment, savePost } from '../../services/postService.js';
 import CreatePost from './CreatePost.js';
 import { Heart, MessageCircle, Send, Bookmark, Plus, X, ChevronLeft, ChevronRight } from 'lucide-react';
 
@@ -55,6 +56,7 @@ const ImageCarousel = ({ images }) => {
 };
 
 function PostsFeed({ user, showCreatePost = true }) {
+  const navigate = useNavigate();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -62,6 +64,7 @@ function PostsFeed({ user, showCreatePost = true }) {
   const [commentInputs, setCommentInputs] = useState({});
   const [showComments, setShowComments] = useState({});
   const [loadingLikes, setLoadingLikes] = useState({});
+  const [loadingSaves, setLoadingSaves] = useState({});
 
   useEffect(() => {
     fetchPosts();
@@ -143,11 +146,35 @@ function PostsFeed({ user, showCreatePost = true }) {
     }
   };
 
+  const handleSave = async (postId) => {
+    if (!user) return alert('Debes iniciar sesión para guardar posts');
+    setLoadingSaves(prev => ({ ...prev, [postId]: true }));
+    try {
+      const isSaved = await savePost(postId, user.uid);
+      setPosts(prevPosts => 
+        prevPosts.map(post => {
+          if (post.id === postId) {
+            const savedBy = post.savedBy || [];
+            return isSaved
+              ? { ...post, savedBy: [...savedBy, user.uid] }
+              : { ...post, savedBy: savedBy.filter(uid => uid !== user.uid) };
+          }
+          return post;
+        })
+      );
+    } catch (error) {
+      console.error('Error al guardar post:', error);
+    } finally {
+      setLoadingSaves(prev => ({ ...prev, [postId]: false }));
+    }
+  };
+
   const toggleComments = (postId) => {
     setShowComments(prev => ({ ...prev, [postId]: !prev[postId] }));
   };
 
   const isPostLiked = (post) => user && post.likes?.includes(user.uid);
+  const isPostSaved = (post) => user && post.savedBy?.includes(user.uid);
 
   if (loading) return <div className="text-center py-4 text-gray-500">Cargando...</div>;
 
@@ -171,7 +198,12 @@ function PostsFeed({ user, showCreatePost = true }) {
             <div key={post.id} className="bg-white border-b sm:border sm:rounded-lg border-[#dbdbdb] overflow-hidden">
               <div className="flex items-center px-4 py-3">
                 <img src={post.userAvatar || `https://i.pravatar.cc/150?u=${post.userName}`} alt={post.userName} className="w-8 h-8 rounded-full object-cover mr-3"/>
-                <span className="font-semibold text-sm">{post.userName}</span>
+                <span 
+                  className="font-semibold text-sm hover:underline cursor-pointer"
+                  onClick={() => navigate(`/profile/${post.userId}`)}
+                >
+                  {post.userName}
+                </span>
               </div>
               
               <ImageCarousel images={post.imageUrls || (post.imageUrl ? [post.imageUrl] : [])} />
@@ -184,13 +216,24 @@ function PostsFeed({ user, showCreatePost = true }) {
                   <MessageCircle className="w-7 h-7" />
                 </button>
                 <button className="p-1 hover:opacity-50 transition"><Send className="w-7 h-7" /></button>
-                <button className="ml-auto p-1 hover:opacity-50 transition"><Bookmark className="w-7 h-7" /></button>
+                <button 
+                  onClick={() => handleSave(post.id)} 
+                  disabled={loadingSaves[post.id]} 
+                  className="ml-auto p-1 hover:opacity-50 transition"
+                >
+                  <Bookmark className={`w-7 h-7 ${isPostSaved(post) ? 'fill-black' : ''}`} />
+                </button>
               </div>
 
               <div className="px-4 text-sm font-semibold">{post.likesCount || 0} Me gusta</div>
 
               <div className="px-4 pb-2 pt-1 text-sm">
-                <span className="font-semibold mr-1">{post.userName}</span>
+                <span 
+                  className="font-semibold mr-1 hover:underline cursor-pointer"
+                  onClick={() => navigate(`/profile/${post.userId}`)}
+                >
+                  {post.userName}
+                </span>
                 <span>{post.content}</span>
               </div>
 
@@ -204,7 +247,12 @@ function PostsFeed({ user, showCreatePost = true }) {
                 <div className="px-4 pb-2 space-y-2 max-h-40 overflow-y-auto">
                   {post.comments.map((comment, index) => (
                     <div key={comment.id || index} className="text-sm">
-                      <span className="font-semibold mr-1">{comment.userName}</span>
+                      <span 
+                        className="font-semibold mr-1 hover:underline cursor-pointer"
+                        onClick={() => navigate(`/profile/${comment.userId}`)}
+                      >
+                        {comment.userName}
+                      </span>
                       <span>{comment.text}</span>
                       <div className="text-xs text-gray-400 mt-1">{formatDate(comment.createdAt)}</div>
                     </div>

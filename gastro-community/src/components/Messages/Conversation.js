@@ -179,7 +179,10 @@ const Conversation = ({ user, userProfile }) => {
             />
             
             <div>
-              <h2 className="font-semibold text-gray-900">
+              <h2 
+                className="font-semibold text-gray-900 hover:underline cursor-pointer"
+                onClick={() => navigate(`/profile/${otherParticipant.uid}`)}
+              >
                 {otherParticipant.displayName}
               </h2>
               <p className="text-sm text-gray-500">

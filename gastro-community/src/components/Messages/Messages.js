@@ -179,7 +179,15 @@ const Messages = ({ user, userProfile }) => {
                       <div key={profile.uid} onClick={() => handleStartConversation(profile.uid)} className="flex items-center p-3 hover:bg-gray-50 cursor-pointer transition-colors">
                         <img src={profile.photoURL || `https://i.pravatar.cc/150?u=${profile.uid}`} alt={profile.displayName} className="w-11 h-11 rounded-full object-cover mr-3" />
                         <div>
-                          <p className="font-semibold">{profile.displayName}</p>
+                          <p 
+                            className="font-semibold hover:underline cursor-pointer"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/profile/${profile.uid}`);
+                            }}
+                          >
+                            {profile.displayName}
+                          </p>
                           {profile.username && <p className="text-sm text-gray-500">@{profile.username}</p>}
                         </div>
                       </div>
@@ -257,7 +265,13 @@ const Messages = ({ user, userProfile }) => {
                       
                       <div className="flex-1 ml-4 min-w-0">
                         <div className="flex justify-between items-center mb-1">
-                          <h2 className="font-semibold text-gray-900 truncate">
+                          <h2 
+                            className="font-semibold text-gray-900 truncate hover:underline cursor-pointer"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/profile/${otherParticipant?.uid}`);
+                            }}
+                          >
                             {otherParticipant?.displayName || 'Usuario'}
                           </h2>
                           <span className="text-xs text-gray-500 flex-shrink-0">
