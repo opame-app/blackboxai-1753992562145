@@ -77,6 +77,14 @@ service cloud.firestore {
 
     function isSignedIn() { return request.auth != null; }
 
+    function isStaffFromOwnerShop(staffID) {
+      // Check if the current user owns the shop that the staff member belongs to
+      let staffDoc = get(/databases/$(database)/documents/staff/$(staffID));
+      let shopRef = staffDoc.data.shop;
+      let shopDoc = get(shopRef);
+      return shopDoc.data.ownerId == request.auth.uid;
+    }
+
     // function docExists() {
     // 	return exists(/databases/$(database)/documents/users/$(request.auth.uid));
     // }
@@ -616,6 +624,14 @@ service cloud.firestore {
       // Solo el propietario puede eliminar su restaurante
       allow delete: if request.auth != null && 
                      ('ownerId' in resource.data && request.auth.uid == resource.data.ownerId);
+    }
+    
+    // Reglas para proveedores (suppliers)
+    match /supplier/{supplierId} {
+      // Cualquier usuario autenticado puede leer la información de los proveedores
+      allow read: if request.auth != null;
+      // Nadie puede escribir directamente, para mantener la integridad de los datos scrapeados
+      allow write: if false;
     }
     // Reglas para notificaciones
     match /notifications/{notificationId} {

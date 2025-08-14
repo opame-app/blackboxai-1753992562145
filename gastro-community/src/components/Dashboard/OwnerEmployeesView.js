@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../firebase.js';
 import { 
   Users, 
   Search, 
@@ -14,8 +12,11 @@ import {
   ChevronDown,
   User,
   Calendar,
-  Award
+  Award,
+  IdCard,
+  Cake
 } from 'lucide-react';
+import { getStaffByOwner, transformStaffData } from '../../services/staffService.js';
 
 function OwnerEmployeesView({ user, userProfile }) {
   const [employees, setEmployees] = useState([]);
@@ -49,26 +50,26 @@ function OwnerEmployeesView({ user, userProfile }) {
 
   const fetchEmployees = async () => {
     try {
-      const q = query(
-        collection(db, 'users'),
-        where('userType', '==', 'employee'),
-        where('isActive', '==', true)
-      );
+      console.log('🚀 Starting to fetch employees for user:', user.uid);
+      console.log('👤 User profile:', userProfile);
       
-      const querySnapshot = await getDocs(q);
-      const employeesData = [];
+      // Get staff members for this owner
+      const staffData = await getStaffByOwner(user.uid);
+      console.log('📊 Raw staff data received:', staffData);
       
-      querySnapshot.forEach((doc) => {
-        employeesData.push({
-          id: doc.id,
-          ...doc.data()
-        });
+      // Transform staff data to match the expected format
+      const employeesData = staffData.map(staff => {
+        const transformed = transformStaffData(staff);
+        console.log('🔄 Transformed staff:', staff.firstName, '→', transformed);
+        return transformed;
       });
       
+      console.log('✅ Final employees data:', employeesData);
       setEmployees(employeesData);
       setFilteredEmployees(employeesData);
     } catch (error) {
-      console.error('Error fetching employees:', error);
+      console.error('❌ Error fetching employees:', error);
+      console.error('Error details:', error.message, error.stack);
     } finally {
       setLoading(false);
     }
@@ -344,6 +345,36 @@ function OwnerEmployeesView({ user, userProfile }) {
                 </div>
               </div>
 
+              {/* Información personal */}
+              <div className="bg-blue-50 rounded-lg p-4 mb-6">
+                <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                  <IdCard className="w-5 h-5 mr-2 text-blue-600" />
+                  Información Personal
+                </h4>
+                <div className="space-y-2">
+                  {selectedEmployee.governmentID && (
+                    <div className="flex items-center">
+                      <IdCard className="w-4 h-4 mr-3 text-gray-400" />
+                      <span className="text-gray-700">Cédula: {selectedEmployee.governmentID}</span>
+                    </div>
+                  )}
+                  {selectedEmployee.birthDate && (
+                    <div className="flex items-center">
+                      <Cake className="w-4 h-4 mr-3 text-gray-400" />
+                      <span className="text-gray-700">
+                        Fecha de nacimiento: {new Date(selectedEmployee.birthDate).toLocaleDateString('es-ES')}
+                      </span>
+                    </div>
+                  )}
+                  {selectedEmployee.emergencyContact && (
+                    <div className="flex items-center">
+                      <Phone className="w-4 h-4 mr-3 text-gray-400" />
+                      <span className="text-gray-700">Contacto de emergencia: {selectedEmployee.emergencyContact}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* Información profesional */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div className="bg-blue-50 rounded-lg p-4">
@@ -383,6 +414,42 @@ function OwnerEmployeesView({ user, userProfile }) {
                         {skill}
                       </span>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Información de sesiones */}
+              {(selectedEmployee.firstSession || selectedEmployee.lastSession) && (
+                <div className="bg-green-50 rounded-lg p-4 mb-6">
+                  <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                    <Calendar className="w-5 h-5 mr-2 text-green-600" />
+                    Actividad en la Plataforma
+                  </h4>
+                  <div className="space-y-2">
+                    {selectedEmployee.firstSession?.timestamp && (
+                      <div className="flex items-center">
+                        <Calendar className="w-4 h-4 mr-3 text-gray-400" />
+                        <span className="text-gray-700">
+                          Primera sesión: {new Date(selectedEmployee.firstSession.timestamp.toDate()).toLocaleDateString('es-ES')}
+                        </span>
+                      </div>
+                    )}
+                    {selectedEmployee.lastSession?.timestamp && (
+                      <div className="flex items-center">
+                        <Calendar className="w-4 h-4 mr-3 text-gray-400" />
+                        <span className="text-gray-700">
+                          Última sesión: {new Date(selectedEmployee.lastSession.timestamp.toDate()).toLocaleDateString('es-ES')}
+                        </span>
+                      </div>
+                    )}
+                    {selectedEmployee.lastSession?.device && (
+                      <div className="flex items-center">
+                        <User className="w-4 h-4 mr-3 text-gray-400" />
+                        <span className="text-gray-700">
+                          Dispositivo: {selectedEmployee.lastSession.device} ({selectedEmployee.lastSession.os})
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

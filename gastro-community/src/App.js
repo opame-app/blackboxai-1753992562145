@@ -3,12 +3,14 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './firebase.js';
 import { getUserProfile } from './services/userService.js';
+import { testStaffService } from './services/staffService.js';
 
 import Sidebar from './components/Common/Sidebar.js';
 import SignIn from './components/Auth/SignIn.js';
 import SignUpForm from './components/Auth/SignUpForm.js';
 import OwnerDashboard from './components/Dashboard/OwnerDashboard.js';
 import OwnerEmployeesView from './components/Dashboard/OwnerEmployeesView.js';
+import OwnerSuppliersView from './components/Dashboard/OwnerSuppliersView.js';
 import SupplierProfile from './components/Dashboard/SupplierProfile.js';
 import EmployeeDashboard from './components/Dashboard/EmployeeDashboard.js';
 import InfluencerDashboard from './components/Dashboard/InfluencerDashboard.js';
@@ -39,6 +41,9 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Make test function available globally
+    window.testStaffService = testStaffService;
+    
     if (!auth) {
       // Firebase not configured, show a message
       setLoading(false);
@@ -281,6 +286,15 @@ function App() {
                 <PrivateRoute user={user} userProfile={userProfile}>
                   {userProfile?.role === 'dueño de restaurant' ? (
                     <OwnerEmployeesView user={user} userProfile={userProfile} />
+                  ) : (
+                    <Navigate to="/dashboard" />
+                  )}
+                </PrivateRoute>
+              } />
+              <Route path="/proveedores" element={
+                <PrivateRoute user={user} userProfile={userProfile}>
+                  {userProfile?.role === 'dueño de restaurant' ? (
+                    <OwnerSuppliersView user={user} userProfile={userProfile} />
                   ) : (
                     <Navigate to="/dashboard" />
                   )}
